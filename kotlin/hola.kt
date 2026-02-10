@@ -1,4 +1,3 @@
 fun main() {
-    print("Hello, world!")
-    // Hello, world!
+    print("Hola mundo") // Hola, mundo
 }
