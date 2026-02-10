@@ -43,5 +43,19 @@ public class TiposDatosBasicos {
         int number3 = 23;
         String text5 = String.valueOf(number3);
         System.out.println(text5);
+
+        // Create a program that:
+        // Defines two byte variables to store your age and the age of a friend
+        // Defines another byte variable to store the addition of both ages (you may need to typecast the result)
+        // Defines a float variable to store the average of these ages, including fraction digits
+        // Prints the message "The age average is " followed by the average calculated in previous step
+        byte age1 = 43, age2 = 39;
+        System.out.println(age1);
+        System.out.println(age2);
+        byte sumAges = (byte)(age1 + age2);
+        System.out.println("The sum is " + sumAges);
+
+        float ageAverages = (float)(age1 + age2) / 2;
+        System.out.println("The average is " + ageAverages);
     }
 }
