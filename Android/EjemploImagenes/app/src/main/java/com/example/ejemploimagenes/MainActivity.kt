@@ -23,8 +23,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.ejemploimagenes.ui.theme.EjemploImagenesTheme
@@ -51,14 +54,21 @@ fun Greeting(modifier: Modifier = Modifier) {
     Image(painter = painterResource(id = R.drawable.casa7), contentDescription = "Casa")
     Text(
       text = "Imagen casa",
-      color = Color.White,
+      style = TextStyle(
+        color = Color.White,
+        shadow = Shadow(color = Color.Black, offset = Offset(1f, 2f), blurRadius = 3f)
+      ),
       modifier = Modifier
         .clip(CircleShape)
-        .background(Color.Black.copy(alpha = 0.7f))
+        .background(Color.Black.copy(alpha = 0.5f))
         .padding(12.dp)
     )
-    Row(modifier = Modifier.align(Alignment.TopEnd).offset(x = (-10).dp, y = 10.dp),
-      horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(
+      modifier = Modifier
+        .align(Alignment.TopEnd)
+        .offset(x = (-10).dp, y = 10.dp),
+      horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
       Icon(
         imageVector = Icons.Default.AddCircle,
         contentDescription = "Add",
