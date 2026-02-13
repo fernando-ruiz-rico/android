@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -71,6 +74,17 @@ fun Greeting(modifier: Modifier = Modifier) {
         .background(Color.Blue)
         .padding(12.dp)
     )
+    Button(
+      onClick = {},
+      colors = ButtonColors(
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.primary,
+        disabledContentColor = MaterialTheme.colorScheme.secondary,
+        disabledContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+      )
+    ) {
+    Text("Hola")
+  }
   }
 }
 
