@@ -42,4 +42,26 @@ fun main() {
 
     val totalCount = greenNumbers.count() + redNumbers.count()
     println(totalCount)
+
+    // You have a set of protocols supported by your server. A user requests to use a particular protocol. Complete the program to check whether the requested protocol is supported or not (isSupported must be a Boolean value).
+    val SUPPORTED = setOf("HTTP", "HTTPS", "FTP", "SMTP")
+    println(SUPPORTED)
+    val requested = "smtp"
+    val isSupported = requested.uppercase() in SUPPORTED
+    println("Support for $requested: $isSupported")
+
+    // Define a map that relates integer numbers from 1 to 3 to their corresponding spelling. Use this map to spell the given number.
+    val number2word = mapOf(1 to "one", 2 to "two", 3 to "three")
+    println(number2word)
+    val n = 2
+    println("$n is spelt as '${number2word[n]}'")
+
+    // Create a mutable list called inventory with: "Sword", "Shield", "Potion". Add a "Bow". Remove the "Potion". Finally, print the inventory and how many items it has using .count().
+    val inventory = mutableListOf("Sword", "Shield", "Potion")
+    println(inventory)
+    inventory.add("Bow")
+    println(inventory)
+    inventory.remove("Potion")
+    println(inventory)
+    println("You have ${inventory.count()} items")
 }
