@@ -46,6 +46,12 @@ fun main() {
     // https://example.com/book-info/5/year
     // https://example.com/book-info/5/author
     println(actions)
-    val urls = actions.map({ action -> "http://www.example.com/$id/$action" })
+    val urls = actions.map({ action -> "$prefix/$id/$action" })
     println(urls)
+
+    // Given a list of words of varying lengths, use a lambda expression with the .filter function to create a new list. This new list should only contain words that have a length greater than 5 characters. Finally, print the resulting list.
+    val words = listOf("sun", "bat", "bread", "platypus", "light", "developer")
+    println(words)
+    val longWords = words.filter({word -> word.length > 5})
+    println(longWords)
 }

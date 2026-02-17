@@ -46,6 +46,13 @@ fun intervalInSeconds(hours: Int = 0, minutes: Int = 0, seconds: Int = 0): Int {
     return (((hours * 60) + minutes) * 60) + seconds
 }
 
+// Create a function named personalizedGreeting that takes three parameters: name (String), age (Int), and city (String).
+// Assign a default value of "Madrid" to the city parameter.
+// The function should print a message like: "Hello, my name is [name], I am [age] years old and I live in [city]."
+fun personalizedGreeting(name:String, age:Int, city:String = "Madrid") {
+    println("Hello, my name is $name and I am $age years old and I live in $city")
+}
+
 fun main() {
     hello()
     hello()
@@ -82,4 +89,8 @@ fun main() {
     println(intervalInSeconds(minutes = 1))
     println(intervalInSeconds(seconds = 2, minutes = 1))
     println(intervalInSeconds(hours = 1, seconds = 2))
+
+    personalizedGreeting("John", 50)
+    personalizedGreeting("Fernando", 50, "Alicante")
+    personalizedGreeting(city = "Valencia", age = 40, name = "Peter")
 }
