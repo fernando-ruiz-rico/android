@@ -37,7 +37,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@SuppressLint("UnrememberedMutableState")
 @Composable
 fun Greeting(modifier: Modifier = Modifier) {
   var contador by remember { mutableIntStateOf(0) }
