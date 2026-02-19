@@ -38,7 +38,7 @@ class Entidad(var x: Int, var y: Int, val tipo: String) {
     }
 }
 
-// --- 3. PROGRAMA PRINCIPAL ---
+// --- PROGRAMA PRINCIPAL ---
 fun main() {
     // Constantes: El tamaño del mapa
     val ancho = 12
