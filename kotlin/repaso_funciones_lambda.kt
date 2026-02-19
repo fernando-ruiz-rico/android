@@ -62,11 +62,11 @@ fun main() {
 
   val personas = listOf<Persona>(
     Persona("Juan", 23),
-                                 Persona("Marta", 41),
-                                 Persona("Pedro", 16),
-                                 Persona("Marco", 62),
-                                 Persona("Ana", 15),
-                                 Persona("Martín", 43),
+    Persona("Marta", 41),
+    Persona("Pedro", 16),
+    Persona("Marco", 62),
+    Persona("Ana", 15),
+    Persona("Martín", 43),
   )
 
   // Imprime personas menores de edad
