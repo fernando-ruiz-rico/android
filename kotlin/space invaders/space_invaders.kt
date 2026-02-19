@@ -1,7 +1,7 @@
 /**
  * JUEGO: INVASORES DEL ESPACIO
  * * Conceptos clave:
- * 1. class: El plano para crear objetos (naves, balas, etc.).
+ * 1. class: La clase principal que nos permitirá crear objetos (naves, balas, etc.).
  * 2. mutableListOf: Una lista que puede crecer (añadir balas) y encogerse (borrar aliens).
  * 3. when: Una forma más limpia de escribir muchos 'if/else'.
  * 4. readln(): Detiene el programa para leer lo que escribe el usuario.
@@ -12,7 +12,7 @@
 // Una clase define cómo son los objetos. Aquí decimos que toda entidad tiene:
 // - x, y: Coordenadas (posición en el mapa). Son 'var' porque cambian al moverse.
 // - tipo: Un texto ("NAVE", "ALIEN", etc.) para saber qué es. Es 'val' porque no cambia.
-class Entidad(var x: Int, var y: Int, val tipo:String) {
+class Entidad(var x: Int, var y: Int, val tipo: String) {
 
     // Función (método) para mover este objeto concreto.
     // Recibe la acción del usuario ("IZQUIERDA", "FUEGO", etc.)
@@ -50,7 +50,7 @@ fun main() {
 
     // CREACIÓN DE LA NAVE
     // La colocamos en el centro (ancho/2) y en la última fila (alto-1)
-    val nave = Entidad(ancho / 2,alto - 1,"NAVE")
+    val nave = Entidad(ancho / 2, alto - 1, "NAVE")
     entidades.add(nave)
 
     // CREACIÓN DE ALIENS
@@ -58,12 +58,12 @@ fun main() {
     for (i in 1..3) {
         // Posición x aleatoria entre 0 y 11
         val xAleatoria = (Math.random() * ancho).toInt()
-        entidades.add(Entidad(xAleatoria,0,"ALIEN"))
+        entidades.add(Entidad(xAleatoria, 0, "ALIEN"))
     }
 
     // DIBUJAR
     // Llamamos a la función específica que pinta el mapa en la consola
-    dibujarJuego(entidades, 12,12)
+    dibujarJuego(entidades, ancho, alto)
 }
 
 // --- FUNCIÓN AUXILIAR (LÓGICA VISUAL) ---
