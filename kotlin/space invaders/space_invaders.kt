@@ -63,6 +63,14 @@ fun leerAccion(): String {
     }
 }
 
+fun hayColision(alien: Entidad, bala: Entidad): Boolean {
+    val mismaColumna = (alien.x == bala.x)
+    val choqueDirecto = (alien.y == bala.y)
+    val cruceEnElAire = (alien.y == bala.y + 1)
+
+    return mismaColumna && (choqueDirecto || cruceEnElAire)
+}
+
 // --- FUNCIÓN PARA DIBUJAR EN PANTALLA ---
 // Recibe la lista de objetos y el tamaño del mapa
 fun dibujarJuego(lista: List<Entidad>, ancho: Int, alto: Int) {
@@ -145,6 +153,16 @@ fun main() {
                         dibujarJuego(entidades, ancho, alto)
                         println("¡GAME OVER! La Tierra ha sido invadida.")
                         return
+                    }
+                }
+
+                for (otra in entidades) {
+                    if (otra.tipo == "BALA") {
+                        if (hayColision(entidad, otra)) {
+                            paraBorrar.add(entidad)
+                            paraBorrar.add(otra)
+                            println("¡BOOM! Alien eliminado.")
+                        }
                     }
                 }
             }
