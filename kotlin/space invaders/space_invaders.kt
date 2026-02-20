@@ -73,8 +73,9 @@ fun hayColision(alien: Entidad, bala: Entidad): Boolean {
 
 // --- FUNCIÓN PARA DIBUJAR EN PANTALLA ---
 // Recibe la lista de objetos y el tamaño del mapa
-fun dibujarJuego(lista: List<Entidad>, ancho: Int, alto: Int) {
+fun dibujarJuego(lista: List<Entidad>, ancho: Int, alto: Int, puntos: Int) {
     println("\n\n") // Imprime líneas vacías para limpiar visualmente
+    println("=== PUNTUACIÓN: $puntos ===")
 
     // Bucle anidado: Recorremos cada fila (y) y cada columna (x)
     for (y in 0 until alto) {
@@ -122,11 +123,12 @@ fun main() {
     }
 
     var jugando = true
+    var puntos = 0
 
     while (jugando) {
         // DIBUJAR
         // Llamamos a la función específica que pinta el mapa en la consola
-        dibujarJuego(entidades, ancho, alto)
+        dibujarJuego(entidades, ancho, alto, puntos)
 
         val accion = leerAccion()
 
@@ -150,7 +152,7 @@ fun main() {
 
                 if (entidad.tipo == "ALIEN") {
                     if (entidad.y >= alto - 1) {
-                        dibujarJuego(entidades, ancho, alto)
+                        dibujarJuego(entidades, ancho, alto, puntos)
                         println("¡GAME OVER! La Tierra ha sido invadida.")
                         return
                     }
@@ -161,6 +163,7 @@ fun main() {
                         if (hayColision(entidad, otra)) {
                             paraBorrar.add(entidad)
                             paraBorrar.add(otra)
+                            puntos += 100
                             println("¡BOOM! Alien eliminado.")
                         }
                     }
@@ -172,7 +175,7 @@ fun main() {
             val alienRestantes = entidades.count({ it.tipo == "ALIEN" })
 
             if (alienRestantes == 0) {
-                dibujarJuego(entidades, ancho, alto)
+                dibujarJuego(entidades, ancho, alto, puntos)
                 println("¡VICTORIA! Has eliminado la amenaza")
                 return
             }
