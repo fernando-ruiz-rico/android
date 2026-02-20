@@ -157,7 +157,7 @@ fun main() {
                 }
 
                 for (otra in entidades) {
-                    if (otra.tipo == "BALA") {
+                    if (entidad.tipo == "ALIEN" && otra.tipo == "BALA") {
                         if (hayColision(entidad, otra)) {
                             paraBorrar.add(entidad)
                             paraBorrar.add(otra)
@@ -168,6 +168,14 @@ fun main() {
             }
 
             entidades.removeAll(paraBorrar)
+
+            val alienRestantes = entidades.count({ it.tipo == "ALIEN" })
+
+            if (alienRestantes == 0) {
+                dibujarJuego(entidades, ancho, alto)
+                println("¡VICTORIA! Has eliminado la amenaza")
+                return
+            }
 
             println(entidades.size)
         }
