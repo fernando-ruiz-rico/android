@@ -41,7 +41,6 @@ class MainActivity : ComponentActivity() {
       ComponentesTextoTheme {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
           Greeting(
-            name = "Android",
             modifier = Modifier.padding(innerPadding)
           )
         }
@@ -51,7 +50,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
+fun Greeting(modifier: Modifier = Modifier) {
   Column(modifier = modifier) {
     TextFieldClasico()
     TextFieldModerno()
@@ -120,6 +119,6 @@ fun TextFieldCompleto() {
 @Composable
 fun GreetingPreview() {
   ComponentesTextoTheme {
-    Greeting("Android")
+    Greeting()
   }
 }
