@@ -38,34 +38,6 @@ class Entidad(var x: Int, var y: Int, val tipo: String) {
     }
 }
 
-// --- PROGRAMA PRINCIPAL ---
-fun main() {
-    // Constantes: El tamaño del mapa
-    val ancho = 12
-    val alto = 12
-
-    // LISTA PRINCIPAL: Aquí guardamos TODAS LAS ENTIDADES (Nave, Aliens y Balas).
-    // Usamos 'mutableListOf' porque durante el juego añadiremos y borraremos entidades.
-    val entidades = mutableListOf<Entidad>()
-
-    // CREACIÓN DE LA NAVE
-    // La colocamos en el centro (ancho/2) y en la última fila (alto-1)
-    val nave = Entidad(ancho / 2, alto - 1, "NAVE")
-    entidades.add(nave)
-
-    // CREACIÓN DE ALIENS
-    // Un bucle for para crear 3 enemigos
-    for (i in 1..3) {
-        // Posición x aleatoria entre 0 y 11
-        val xAleatoria = (Math.random() * ancho).toInt()
-        entidades.add(Entidad(xAleatoria, 0, "ALIEN"))
-    }
-
-    // DIBUJAR
-    // Llamamos a la función específica que pinta el mapa en la consola
-    dibujarJuego(entidades, ancho, alto)
-}
-
 // --- FUNCIÓN AUXILIAR (LÓGICA VISUAL) ---
 // De momento, esta función no pertenece a la clase.
 // Simplemente traduce un TIPO en un DIBUJO.
@@ -75,6 +47,19 @@ fun obtenerIcono(tipo: String): String {
         "ALIEN" -> "V"
         "BALA" -> "|"
         else -> "?"
+    }
+}
+
+fun leerAccion(): String {
+    print("Mover [i/d], Fuego [f], Salir [x] > ")
+    val entrada = readln()
+
+    return when (entrada.lowercase()) {
+        "i" -> "IZQUIERDA"
+        "d" -> "DERECHA"
+        "f" -> "FUEGO"
+        "x" -> "SALIR"
+        else -> ""
     }
 }
 
@@ -102,5 +87,71 @@ fun dibujarJuego(lista: List<Entidad>, ancho: Int, alto: Int) {
             print("$simbolo ")
         }
         println() // Al terminar la fila, hacemos un salto de línea
+    }
+}
+
+// --- PROGRAMA PRINCIPAL ---
+fun main() {
+    // Constantes: El tamaño del mapa
+    val ancho = 12
+    val alto = 12
+
+    // LISTA PRINCIPAL: Aquí guardamos TODAS LAS ENTIDADES (Nave, Aliens y Balas).
+    // Usamos 'mutableListOf' porque durante el juego añadiremos y borraremos entidades.
+    val entidades = mutableListOf<Entidad>()
+
+    // CREACIÓN DE LA NAVE
+    // La colocamos en el centro (ancho/2) y en la última fila (alto-1)
+    val nave = Entidad(ancho / 2, alto - 1, "NAVE")
+    entidades.add(nave)
+
+    // CREACIÓN DE ALIENS
+    // Un bucle for para crear 3 enemigos
+    for (i in 1..3) {
+        // Posición x aleatoria entre 0 y 11
+        val xAleatoria = (Math.random() * ancho).toInt()
+        entidades.add(Entidad(xAleatoria, 0, "ALIEN"))
+    }
+
+    var jugando = true
+
+    while (jugando) {
+        // DIBUJAR
+        // Llamamos a la función específica que pinta el mapa en la consola
+        dibujarJuego(entidades, ancho, alto)
+
+        val accion = leerAccion()
+
+        if (accion == "SALIR") {
+            jugando = false
+        } else {
+            if (accion == "FUEGO") {
+                entidades.add(Entidad(nave.x, nave.y, "BALA"))
+            }
+
+            for (entidad in entidades) {
+                entidad.mover(accion)
+            }
+
+            val paraBorrar = mutableListOf<Entidad>()
+
+            for (entidad in entidades) {
+                if (entidad.y < 0 || entidad.y >= alto) {
+                    if (entidad.tipo != "NAVE") paraBorrar.add(entidad)
+                }
+
+                if (entidad.tipo == "ALIEN") {
+                    if (entidad.y >= alto - 1) {
+                        dibujarJuego(entidades, ancho, alto)
+                        println("¡GAME OVER! La Tierra ha sido invadida.")
+                        return
+                    }
+                }
+            }
+
+            entidades.removeAll(paraBorrar)
+
+            println(entidades.size)
+        }
     }
 }
