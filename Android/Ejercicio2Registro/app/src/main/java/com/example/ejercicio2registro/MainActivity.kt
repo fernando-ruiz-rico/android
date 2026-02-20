@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -70,6 +71,7 @@ fun FormularioRegistro(modifier: Modifier = Modifier) {
     OutlinedTextField(
       state = usernameState,
       modifier = Modifier.fillMaxWidth(),
+      lineLimits = TextFieldLineLimits.SingleLine,
       label = { Text("Nombre de usuario") })
 
     OutlinedSecureTextField(
