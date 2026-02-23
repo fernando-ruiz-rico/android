@@ -118,9 +118,9 @@ fun generarPowerup(entidades: MutableList<Entidad>) {
 
 // --- FUNCIÓN PARA DIBUJAR EN PANTALLA ---
 // Recibe la lista de objetos y el tamaño del mapa
-fun dibujarJuego(lista: List<Entidad>, puntos: Int, vidas: Int, numOleada: Int) {
+fun dibujarJuego(lista: List<Entidad>, puntos: Int, vidas: Int, numOleada: Int, numBombas: Int) {
     println("\n\n") // Imprime líneas vacías para limpiar visualmente
-    println("=== PUNTUACIÓN: $puntos | VIDAS: $vidas  | OLEADA: $numOleada ===")
+    println("=== PUNTUACIÓN: $puntos | VIDAS: $vidas  | OLEADA: $numOleada | BOMBAS: $numBombas ===")
 
     // Bucle anidado: Recorremos cada fila (y) y cada columna (x)
     for (y in 0 until ALTO) {
@@ -161,6 +161,7 @@ fun main() {
     var puntos = 0
     var vidas = MAX_VIDAS
     var numeroOleada = 1
+    var bombasMasivas = 0
 
     // BUCLE PRINCIPAL DEL JUEGO: Se repite hasta que el jugador gana o pierde o decide salir.
     while (true) {
@@ -168,7 +169,7 @@ fun main() {
         generarPowerup(entidades)
 
         // Llamamos a la función específica que pinta el mapa en la consola
-        dibujarJuego(entidades, puntos, vidas, numeroOleada)
+        dibujarJuego(entidades, puntos, vidas, numeroOleada, bombasMasivas)
 
         // Leemos la acción del usuario (mover izquierda/derecha, disparar o salir)
         val accion = leerAccion()
@@ -218,6 +219,14 @@ fun main() {
                         }
                     }
                 }
+
+                if (entidad.tipo == "POWERUP") {
+                    if (hayColision(entidad, nave)) {
+                        paraBorrar.add(entidad)
+                        bombasMasivas++
+                        println("¡POWERUP RECOGIDO! Tienes $bombasMasivas bombas masivas")
+                    }
+                }
             }
 
             if (invasionEnEsteTurno) {
@@ -225,7 +234,7 @@ fun main() {
                 println("¡Cuidado! Los aliens han invadido la base. Pierdes 1 vida.")
 
                 if (vidas <= 0) {
-                    dibujarJuego(entidades, puntos, vidas, numeroOleada)
+                    dibujarJuego(entidades, puntos, vidas, numeroOleada, bombasMasivas)
                     println("¡GAME OVER! Has perdido todas tus vidas.")
                     return
                 }
