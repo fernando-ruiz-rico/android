@@ -8,6 +8,11 @@
  * 5. Bucle while: Repite el juego una y otra vez hasta que ganamos o perdemos.
  */
 
+// Constantes: El tamaño del mapa
+const val ANCHO = 12
+const val ALTO = 6
+const val ALIENS_POR_OLEADA = 3
+
 // --- CLASE 'ENTIDAD' PARA DEFINIR LOS OBJETOS ---
 // Una clase define cómo son los objetos. Aquí decimos que toda entidad tiene:
 // - x, y: Coordenadas (posición en el mapa). Son 'var' porque cambian al moverse.
@@ -26,7 +31,7 @@ class Entidad(var x: Int, var y: Int, val tipo: String) {
 
                 // Límites: Impedimos que la nave se salga del mapa (ancho 0 a 11)
                 if (x < 0) x = 0
-                if (x > 11) x = 11
+                if (x > ANCHO - 1) x = ANCHO - 1
             }
             "ALIEN" -> {
                 y++ // Sumar y es bajar (el eje Y crece hacia abajo en consola)
@@ -75,15 +80,30 @@ fun hayColision(alien: Entidad, bala: Entidad): Boolean {
     return mismaColumna && (choqueDirecto || cruceEnElAire)
 }
 
+// --- CREACIÓN DE ALIENS ---
+fun generarOleada(entidades: MutableList<Entidad>) {
+    val posicionesUnicas = mutableSetOf<Int>()
+
+    while (posicionesUnicas.size < ALIENS_POR_OLEADA) {
+        val xAleatoria = (Math.random() * ANCHO).toInt()
+        posicionesUnicas.add(xAleatoria)
+    }
+
+    // Un bucle for para crear enemigos
+    for (x in posicionesUnicas) {
+        entidades.add(Entidad(x, 0, "ALIEN"))
+    }
+}
+
 // --- FUNCIÓN PARA DIBUJAR EN PANTALLA ---
 // Recibe la lista de objetos y el tamaño del mapa
-fun dibujarJuego(lista: List<Entidad>, ancho: Int, alto: Int, puntos: Int) {
+fun dibujarJuego(lista: List<Entidad>, puntos: Int, vidas: Int, numOleada: Int) {
     println("\n\n") // Imprime líneas vacías para limpiar visualmente
-    println("=== PUNTUACIÓN: $puntos ===")
+    println("=== PUNTUACIÓN: $puntos | VIDAS: $vidas  | OLEADA: $numOleada ===")
 
     // Bucle anidado: Recorremos cada fila (y) y cada columna (x)
-    for (y in 0 until alto) {
-        for (x in 0 until ancho) {
+    for (y in 0 until ALTO) {
+        for (x in 0 until ANCHO) {
             var simbolo = "." // Por defecto dibujamos un punto (espacio vacío)
 
             // Buscamos: ¿Hay alguna entidad en esta coordenada (x, y)?
@@ -106,34 +126,27 @@ fun dibujarJuego(lista: List<Entidad>, ancho: Int, alto: Int, puntos: Int) {
 // --- FUNCIÓN PRINCIPAL ---
 // Es la función que se llama al iniciar el programa y contiene la lógica principal del juego.
 fun main() {
-    // Constantes: El tamaño del mapa
-    val ancho = 12
-    val alto = 12
-
     // LISTA PRINCIPAL: Aquí guardamos TODAS LAS ENTIDADES (Nave, Aliens y Balas).
     // Usamos 'mutableListOf' porque durante el juego añadiremos y borraremos entidades.
     val entidades = mutableListOf<Entidad>()
 
     // CREACIÓN DE LA NAVE
     // La colocamos en el centro (ancho/2) y en la última fila (alto-1)
-    val nave = Entidad(ancho / 2, alto - 1, "NAVE")
+    val nave = Entidad(ANCHO / 2, ALTO - 1, "NAVE")
     entidades.add(nave)
 
-    // CREACIÓN DE ALIENS
-    // Un bucle for para crear 3 enemigos
-    for (i in 1..3) {
-        // Posición x aleatoria entre 0 y 11
-        val xAleatoria = (Math.random() * ancho).toInt()
-        entidades.add(Entidad(xAleatoria, 0, "ALIEN"))
-    }
+    generarOleada(entidades)
 
     var puntos = 0
+    var vidas = 3
+    var numeroOleada = 1
+
 
     // BUCLE PRINCIPAL DEL JUEGO: Se repite hasta que el jugador gana o pierde o decide salir.
     while (true) {
 
         // Llamamos a la función específica que pinta el mapa en la consola
-        dibujarJuego(entidades, ancho, alto, puntos)
+        dibujarJuego(entidades, puntos, vidas, numeroOleada)
 
         // Leemos la acción del usuario (mover izquierda/derecha, disparar o salir)
         val accion = leerAccion()
@@ -155,31 +168,44 @@ fun main() {
             // Lista temporal para guardar las entidades que deben ser eliminadas (balas que chocan, aliens que llegan al final, etc.)
             val paraBorrar = mutableListOf<Entidad>()
 
+            var invasionEnEsteTurno = false
+
             // Verificamos colisiones y condiciones de fin de juego
             for (entidad in entidades) {
-                if (entidad.y < 0 || entidad.y >= alto) {
+                if (entidad.y < 0 || entidad.y >= ALTO) {
                     if (entidad.tipo != "NAVE") paraBorrar.add(entidad)
                 }
 
                 // Verificamos si un alien ha llegado a la última fila (donde está la nave del jugador)
                 if (entidad.tipo == "ALIEN") {
-                    if (entidad.y >= alto - 1) {
-                        dibujarJuego(entidades, ancho, alto, puntos)
-                        println("¡GAME OVER! La Tierra ha sido invadida.")
-                        return
+                    if (entidad.y >= ALTO - 1) {
+                        paraBorrar.add(entidad)
+                        invasionEnEsteTurno = true
                     }
-                }
-
-                // Verificamos si una bala ha chocado con un alien
-                for (otra in entidades) {
-                    if (entidad.tipo == "ALIEN" && otra.tipo == "BALA") {
-                        if (hayColision(entidad, otra)) {
-                            paraBorrar.add(entidad)
-                            paraBorrar.add(otra)
-                            puntos += 100
-                            println("¡BOOM! Alien eliminado.")
+                    else {
+                        // Verificamos si una bala ha chocado con un alien
+                        for (otra in entidades) {
+                            if (entidad.tipo == "ALIEN" && otra.tipo == "BALA") {
+                                if (hayColision(entidad, otra)) {
+                                    paraBorrar.add(entidad)
+                                    paraBorrar.add(otra)
+                                    puntos += 100
+                                    println("¡BOOM! Alien eliminado. Ganas 100 puntos.")
+                                }
+                            }
                         }
                     }
+                }
+            }
+
+            if (invasionEnEsteTurno) {
+                vidas--
+                println("¡Cuidado! Los aliens han invadido la base. Pierdes 1 vida.")
+
+                if (vidas <= 0) {
+                    dibujarJuego(entidades, puntos, vidas, numeroOleada)
+                    println("¡GAME OVER! Has perdido todas tus vidas.")
+                    return
                 }
             }
 
@@ -191,9 +217,9 @@ fun main() {
 
             // Si no quedan aliens, el jugador gana
             if (alienRestantes == 0) {
-                dibujarJuego(entidades, ancho, alto, puntos)
-                println("¡VICTORIA! Has eliminado la amenaza")
-                return
+                numeroOleada++
+                println("¡OLEADA COMPLETADA! Preparando oleada núm. $numeroOleada")
+                generarOleada(entidades)
             }
         }
     }
