@@ -50,6 +50,8 @@ fun obtenerIcono(tipo: String): String {
     }
 }
 
+// --- FUNCIÓN PARA LEER EL TECLADO ---
+// Pausa el juego, lee la letra que introduce el usuario y devuelve la acción correspondiente.
 fun leerAccion(): String {
     print("Mover [i/d], Fuego [f], Salir [x] > ")
     val entrada = readln()
@@ -63,6 +65,8 @@ fun leerAccion(): String {
     }
 }
 
+// --- FUNCIÓN PARA DETECTAR COLISIONES ---
+// Recibe un Alien y una Bala, y devuelve un Boolean (true si chocan, false si no).
 fun hayColision(alien: Entidad, bala: Entidad): Boolean {
     val mismaColumna = (alien.x == bala.x)
     val choqueDirecto = (alien.y == bala.y)
@@ -99,7 +103,8 @@ fun dibujarJuego(lista: List<Entidad>, ancho: Int, alto: Int, puntos: Int) {
     }
 }
 
-// --- PROGRAMA PRINCIPAL ---
+// --- FUNCIÓN PRINCIPAL ---
+// Es la función que se llama al iniciar el programa y contiene la lógica principal del juego.
 fun main() {
     // Constantes: El tamaño del mapa
     val ancho = 12
@@ -122,34 +127,41 @@ fun main() {
         entidades.add(Entidad(xAleatoria, 0, "ALIEN"))
     }
 
-    var jugando = true
     var puntos = 0
 
-    while (jugando) {
-        // DIBUJAR
+    // BUCLE PRINCIPAL DEL JUEGO: Se repite hasta que el jugador gana o pierde o decide salir.
+    while (true) {
+
         // Llamamos a la función específica que pinta el mapa en la consola
         dibujarJuego(entidades, ancho, alto, puntos)
 
+        // Leemos la acción del usuario (mover izquierda/derecha, disparar o salir)
         val accion = leerAccion()
 
+        // Si el usuario decide salir, terminamos el juego
         if (accion == "SALIR") {
-            jugando = false
+            return
         } else {
+            // Si el usuario dispara, creamos una bala donde esté la nave
             if (accion == "FUEGO") {
                 entidades.add(Entidad(nave.x, nave.y, "BALA"))
             }
 
+            // Movemos todas las entidades según su tipo y la acción del usuario
             for (entidad in entidades) {
                 entidad.mover(accion)
             }
 
+            // Lista temporal para guardar las entidades que deben ser eliminadas (balas que chocan, aliens que llegan al final, etc.)
             val paraBorrar = mutableListOf<Entidad>()
 
+            // Verificamos colisiones y condiciones de fin de juego
             for (entidad in entidades) {
                 if (entidad.y < 0 || entidad.y >= alto) {
                     if (entidad.tipo != "NAVE") paraBorrar.add(entidad)
                 }
 
+                // Verificamos si un alien ha llegado a la última fila (donde está la nave del jugador)
                 if (entidad.tipo == "ALIEN") {
                     if (entidad.y >= alto - 1) {
                         dibujarJuego(entidades, ancho, alto, puntos)
@@ -158,6 +170,7 @@ fun main() {
                     }
                 }
 
+                // Verificamos si una bala ha chocado con un alien
                 for (otra in entidades) {
                     if (entidad.tipo == "ALIEN" && otra.tipo == "BALA") {
                         if (hayColision(entidad, otra)) {
@@ -170,17 +183,18 @@ fun main() {
                 }
             }
 
+            // Eliminamos todas las entidades que deben ser borradas (aliens eliminados, balas que han salido del mapa, etc.)
             entidades.removeAll(paraBorrar)
 
+            // Contamos cuántos aliens quedan en la lista
             val alienRestantes = entidades.count({ it.tipo == "ALIEN" })
 
+            // Si no quedan aliens, el jugador gana
             if (alienRestantes == 0) {
                 dibujarJuego(entidades, ancho, alto, puntos)
                 println("¡VICTORIA! Has eliminado la amenaza")
                 return
             }
-
-            println(entidades.size)
         }
     }
 }
