@@ -10,8 +10,9 @@
 
 // Constantes: El tamaño del mapa
 const val ANCHO = 12
-const val ALTO = 6
-const val ALIENS_POR_OLEADA = 3
+const val ALTO = 12
+const val ALIENS_POR_OLEADA = 2
+const val MAX_VIDAS = 3
 
 // --- CLASE 'ENTIDAD' PARA DEFINIR LOS OBJETOS ---
 // Una clase define cómo son los objetos. Aquí decimos que toda entidad tiene:
@@ -138,7 +139,7 @@ fun main() {
     generarOleada(entidades)
 
     var puntos = 0
-    var vidas = 3
+    var vidas = MAX_VIDAS
     var numeroOleada = 1
 
 
