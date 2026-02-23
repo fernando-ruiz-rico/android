@@ -11,7 +11,7 @@
 // Constantes: El tamaño del mapa
 const val ANCHO = 12
 const val ALTO = 12
-const val ALIENS_POR_OLEADA = 2
+const val ALIENS_POR_OLEADA = 3
 const val MAX_VIDAS = 3
 
 // --- CLASE 'ENTIDAD' PARA DEFINIR LOS OBJETOS ---
@@ -40,6 +40,9 @@ class Entidad(var x: Int, var y: Int, val tipo: String) {
             "BALA" -> {
                 y-- // Restar y es subir
             }
+            "POWERUP" -> {
+                y++
+            }
         }
     }
 }
@@ -52,6 +55,7 @@ fun obtenerIcono(tipo: String): String {
         "NAVE" -> "A"
         "ALIEN" -> "V"
         "BALA" -> "|"
+        "POWERUP" -> "B"
         else -> "?"
     }
 }
@@ -66,17 +70,18 @@ fun leerAccion(): String {
         "i" -> "IZQUIERDA"
         "d" -> "DERECHA"
         "f" -> "FUEGO"
+        "b" -> "BOMBA"
         "x" -> "SALIR"
         else -> ""
     }
 }
 
 // --- FUNCIÓN PARA DETECTAR COLISIONES ---
-// Recibe un Alien y una Bala, y devuelve un Boolean (true si chocan, false si no).
-fun hayColision(alien: Entidad, bala: Entidad): Boolean {
-    val mismaColumna = (alien.x == bala.x)
-    val choqueDirecto = (alien.y == bala.y)
-    val cruceEnElAire = (alien.y == bala.y + 1)
+// Recibe dos entidades, y devuelve un Boolean (true si chocan, false si no).
+fun hayColision(entidad1: Entidad, entidad2: Entidad): Boolean {
+    val mismaColumna = (entidad1.x == entidad2.x)
+    val choqueDirecto = (entidad1.y == entidad2.y)
+    val cruceEnElAire = (entidad1.y == entidad2.y + 1)
 
     return mismaColumna && (choqueDirecto || cruceEnElAire)
 }
@@ -93,6 +98,21 @@ fun generarOleada(entidades: MutableList<Entidad>) {
     // Un bucle for para crear enemigos
     for (x in posicionesUnicas) {
         entidades.add(Entidad(x, 0, "ALIEN"))
+    }
+}
+
+fun generarPowerup(entidades: MutableList<Entidad>) {
+    val hayPowerupEnPantalla = entidades.any({ it.tipo == "POWERUP"})
+
+    if (!hayPowerupEnPantalla && Math.random() < 0.5) {
+        val posicionesAliens = entidades.filter( { it.tipo == "ALIEN"} ).map({ it.x })
+
+        var xAleatoria:Int
+        do {
+            xAleatoria = (Math.random() * ANCHO).toInt()
+        } while(xAleatoria in posicionesAliens)
+
+        entidades.add(Entidad(xAleatoria, 0, "POWERUP"))
     }
 }
 
@@ -142,9 +162,10 @@ fun main() {
     var vidas = MAX_VIDAS
     var numeroOleada = 1
 
-
     // BUCLE PRINCIPAL DEL JUEGO: Se repite hasta que el jugador gana o pierde o decide salir.
     while (true) {
+
+        generarPowerup(entidades)
 
         // Llamamos a la función específica que pinta el mapa en la consola
         dibujarJuego(entidades, puntos, vidas, numeroOleada)
