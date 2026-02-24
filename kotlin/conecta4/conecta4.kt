@@ -21,10 +21,54 @@ const val NO_ENCONTRADO = -1
 
 val tablero = MutableList(FILAS) { MutableList(COLUMNAS) { Ficha.VACIO } }
 
+fun columValida(c: Int): Boolean {
+    return c >= 0 && c < COLUMNAS && tablero[0][c] == Ficha.VACIO
+}
+
+fun colocarFicha(c:Int, ficha:Ficha) {
+}
+
+fun hacerMovimientoJugador() {
+    var movimientoValido = false
+
+    while (!movimientoValido) {
+        print("Tu turno (Columna 0 a ${COLUMNAS - 1}): ")
+
+        val columna = readln().trim().toIntOrNull()
+
+        if (columna != null) {
+            if (columValida(columna)) {
+                colocarFicha(columna, Ficha.JUGADOR)
+                movimientoValido = true
+            }
+            else {
+                println("Movimiento no válido. La columna está llena o no existe")
+            }
+        }
+        else {
+            println("Por favor, introduce un número.")
+        }
+    }
+}
+
 fun imprimirTablero() {
     println()
 
-    print("  ")
+    print(" ")
+    for (c in 0 until COLUMNAS) {
+        print(" $c  ")
+    }
+    println("\n+---------------------------+")
+
+    for (f in 0 until FILAS) {
+        print("|")
+        for (c in 0 until COLUMNAS) {
+            print("${tablero[f][c]}|")
+        }
+        println()
+    }
+
+    println("+---------------------------+")
 }
 
 fun main() {
@@ -54,4 +98,8 @@ fun main() {
     }
 
     println("Estupendo. Has elegido nivel $dificultadSeleccionada")
+
+    imprimirTablero()
+
+    hacerMovimientoJugador()
 }
