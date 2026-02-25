@@ -2,6 +2,7 @@ package com.example.componentescontenido
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.ComponentDialog
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.DrawableRes
@@ -43,6 +44,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
@@ -60,6 +62,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.example.componentescontenido.ui.theme.ComponentesContenidoTheme
 import kotlinx.coroutines.launch
 
@@ -278,7 +281,7 @@ fun EjemploAlert() {
         resultado = "Has pulsado fuera"
       },
       confirmButton = {
-        Button(onClick = {
+        TextButton(onClick = {
           show = false
           resultado = "Has pulsado OK"
         }) {
@@ -286,7 +289,7 @@ fun EjemploAlert() {
         }
       },
       dismissButton = {
-        Button(onClick = {
+        TextButton(onClick = {
           show = false
           resultado = "Has pulsado Cancelar"
         }) {
