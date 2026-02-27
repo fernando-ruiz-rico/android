@@ -5,13 +5,13 @@ plugins {
 }
 
 android {
-  namespace = "com.example.ejemplonavegacion2"
+  namespace = "com.example.ejemplomenulateral"
   compileSdk {
     version = release(36)
   }
 
   defaultConfig {
-    applicationId = "com.example.ejemplonavegacion2"
+    applicationId = "com.example.ejemplomenulateral"
     minSdk = 26
     targetSdk = 36
     versionCode = 1
