@@ -152,6 +152,24 @@ class Biblioteca {
             println("Error: No quedan copias disponibles de '$idMaterial'")
         }
     }
+
+    fun devolverPrestamo(idMaterial:String, idSocio:String) {
+        var prestamoEncontrado: Prestamo? = null
+
+        for (prestamo in prestamos) {
+            if (prestamo.idSocio == idSocio && prestamo.idMaterial == idMaterial) {
+                prestamoEncontrado = prestamo
+            }
+        }
+
+        if (prestamoEncontrado != null) {
+            for(material in inventario) {
+                if (material.id == idMaterial) {
+                    material.devolver()
+                }
+            }
+        }
+    }
 }
 
 fun main() {
@@ -166,6 +184,7 @@ fun main() {
         println("4. Socios: Registrar")
         println("5. Préstamos: Mostrar")
         println("6. Préstamos: Registrar")
+        println("7. Préstamos: Devolver")
         println("8. Salir")
         print("Selecciona una opción: ")
 
@@ -213,6 +232,11 @@ fun main() {
                 val idMaterial = pedirIdValido()
                 val idSocio = pedirIdSocioValido()
                 biblioteca.registrarPrestamo(idMaterial, idSocio)
+            }
+            "7" -> {
+                val idMaterial = pedirIdValido()
+                val idSocio = pedirIdSocioValido()
+                biblioteca.devolverPrestamo(idMaterial, idSocio)
             }
             "8" -> {
                 continuar = false
