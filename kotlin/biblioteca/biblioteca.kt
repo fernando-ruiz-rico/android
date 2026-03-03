@@ -39,9 +39,9 @@ abstract class MaterialBiblioteca(
      * Muestra por consola los detalles básicos del material.
      * La palabra clave `open` permite que las clases hijas puedan sobrescribir (override) esta función en el futuro.
      */
-    open fun mostrarDetalles() {
+    override fun toString():String {
         // Imprime las propiedades separadas por una barra vertical
-        println("$id | $titulo | $autor | $anio | $copias")
+        return("$id | $titulo | $autor | $anio | $copias")
     }
 }
 
@@ -112,7 +112,7 @@ class Biblioteca {
         // Iteramos sobre cada elemento guardado en la lista 'inventario'
         for (material in inventario) {
             // Gracias al polimorfismo, llama al método adecuado sin importar si es Libro, Revista o DVD
-            material.mostrarDetalles()
+            println(material)
         }
     }
 
