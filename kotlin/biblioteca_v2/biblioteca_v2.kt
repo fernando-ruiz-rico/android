@@ -48,30 +48,52 @@ abstract class MaterialBiblioteca(
         return false
     }
 
-    override fun toString():String {
-        return("$id | $titulo | $autor | $anioPublicacion | ($copiasDisponibles / $copiasTotales)")
+    override fun toString(): String {
+        val icono = if (copiasDisponibles > 0) "🟢" else "🔴"
+        // Formato mejorado: Icono [ID] Titulo (Año) - Autor | Stock
+        return "$icono ($copiasDisponibles/$copiasTotales) [$id] \"$titulo\" ($anioPublicacion) de $autor"
     }
 }
 
 class Libro(id: String, titulo:String, autor:String, anio:Int, copias:Int, val numeroPaginas:Int) :
-      MaterialBiblioteca(id, titulo, autor, anio, copias) {
+    MaterialBiblioteca(id, titulo, autor, anio, copias) {
+
+    override fun toString(): String {
+        return super.toString() + " | 📖 $numeroPaginas págs."
+    }
 }
 
-class Revista(id:String, titulo:String, autor:String, anio:Int, copias:Int, numeroEdicion:Int) :
-      MaterialBiblioteca(id, titulo, autor, anio, copias) {
+class Revista(id:String, titulo:String, autor:String, anio:Int, copias:Int, val numeroEdicion:Int) :
+    MaterialBiblioteca(id, titulo, autor, anio, copias) {
+
+    override fun toString(): String {
+        return super.toString() + " | 🗞️ Edición #$numeroEdicion"
+    }
 }
 
-class PeliculaDVD(id:String, titulo:String, autor:String, anio:Int, copias:Int, duracionMinutos:Int) :
-      MaterialBiblioteca(id, titulo, autor, anio, copias) {
+class PeliculaDVD(id:String, titulo:String, autor:String, anio:Int, copias:Int, val duracionMinutos:Int) :
+    MaterialBiblioteca(id, titulo, autor, anio, copias) {
+
+    override fun toString(): String {
+        return super.toString() + " | 🎬 $duracionMinutos min."
+    }
 }
 
 class Socio(val idSocio:String, val nombre:String) {
+    override fun toString(): String {
+        return "👤 [$idSocio] $nombre"
+    }
 }
 
 class Prestamo(val idSocio: String, val idMaterial:String, val fechaPrestamo:LocalDate, val fechaVencimiento: LocalDate) {
     fun estaVencido():Boolean {
         val hoy = LocalDate.now()
         return hoy.isAfter(fechaVencimiento)
+    }
+
+    override fun toString(): String {
+        val estado = if (estaVencido()) "⚠️" else "✅"
+        return "$estado $fechaVencimiento | Socio: $idSocio | Material: $idMaterial"
     }
 }
 
@@ -100,14 +122,14 @@ class Biblioteca {
     fun mostrarSocios() {
         println("\n--- SOCIOS ---")
         for (socio in socios) {
-            println("ID: ${socio.idSocio} | Nombre: ${socio.nombre}")
+            println(socio)
         }
     }
 
     fun mostrarPrestamos() {
         println("\n--- PRESTAMOS ---")
         for (prestamo in prestamos) {
-            println("El socio '${prestamo.idSocio}' tiene '${prestamo.idMaterial}' (vence el ${prestamo.fechaVencimiento})")
+            println(prestamo)
         }
     }
 
