@@ -240,10 +240,36 @@ class Biblioteca {
         File("socios.csv").writeText(textoSocios)
         File("prestamos.csv").writeText(textoPrestamos)
     }
+
+    fun cargarDatos() {
+        if (File("socios.csv").exists()) {
+            socios.clear()
+            for (linea in File("socios.csv").readLines()) {
+                if (linea.trim().isNotEmpty()) {
+                    val datos = linea.split(";")
+                    socios.add(Socio(datos[0], datos[1]))
+                }
+            }
+        }
+
+        if (File("prestamos.csv").exists()) {
+            prestamos.clear()
+            for (linea in File("prestamos.csv").readLines()) {
+                if (linea.trim().isNotEmpty()) {
+                    val datos = linea.split(";")
+                    val fechaPrestamo = LocalDate.parse(datos[2])
+                    val fechaVencimiento = LocalDate.parse(datos[3])
+                    prestamos.add(Prestamo(datos[0], datos[1], fechaPrestamo, fechaVencimiento))
+                }
+            }
+        }
+    }
 }
 
 fun main() {
     val biblioteca = Biblioteca()
+
+    biblioteca.cargarDatos()
 
     var continuar = true
     while (continuar) {
