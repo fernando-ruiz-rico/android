@@ -48,8 +48,8 @@ abstract class MaterialBiblioteca(
         return false
     }
 
-    fun mostraDetalles() {
-        println("$id | $titulo | $autor | $anioPublicacion | ($copiasDisponibles / $copiasTotales)")
+    override fun toString():String {
+        return("$id | $titulo | $autor | $anioPublicacion | ($copiasDisponibles / $copiasTotales)")
     }
 }
 
@@ -93,7 +93,7 @@ class Biblioteca {
     fun mostrarInventario() {
         println("\n--- INVENTARIO ---")
         for (material in inventario) {
-            material.mostraDetalles()
+            println(material)
         }
     }
 
