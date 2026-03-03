@@ -153,7 +153,7 @@ class Biblioteca {
     }
 
     fun mostrarPrestamos() {
-        println("\n--- PRESTAMOS ---")
+        println("\n--- PRÉSTAMOS ---")
         for (prestamo in prestamos) {
             println(prestamo)
         }
@@ -242,6 +242,34 @@ class Biblioteca {
     }
 
     fun cargarDatos() {
+        if (File("inventario.csv").exists()) {
+            inventario.clear()
+            for (linea in File("inventario.csv").readLines()) {
+                if (linea.trim().isNotEmpty()) {
+                    val datos = linea.split(";")
+                    var material: MaterialBiblioteca? = null
+                    when (datos[0]) {
+                        "Libro" -> {
+                            material = Libro(datos[1], datos[2], datos[3],
+                                           datos[4].toInt(), datos[5].toInt(), datos[7].toInt())
+                        }
+                        "Revista" -> {
+                            material = Revista(datos[1], datos[2], datos[3],
+                                             datos[4].toInt(), datos[5].toInt(), datos[7].toInt())
+                        }
+                        "PeliculaDVD" -> {
+                            material = PeliculaDVD(datos[1], datos[2], datos[3],
+                                                 datos[4].toInt(), datos[5].toInt(), datos[7].toInt())
+                        }
+                    }
+                    if (material != null) {
+                        material.copiasDisponibles = datos[6].toInt()
+                        inventario.add(material)
+                    }
+                }
+            }
+        }
+
         if (File("socios.csv").exists()) {
             socios.clear()
             for (linea in File("socios.csv").readLines()) {
