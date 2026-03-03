@@ -1,7 +1,6 @@
-ID;Nombre
-SOC-001;Fernando
-SOC-002;Juan
-SOC-003;Manuel
-SOC-004;Alex
-SOC-005;Juan Antonio
-
+ID,Nombre
+SOC-001,Fernando
+SOC-002,Juan
+SOC-003,Manuel
+SOC-004,Alex
+SOC-005,Juan Antonio
