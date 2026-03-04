@@ -1,0 +1,13 @@
+https://openmoji.org
+https://github.com/hfg-gmuend/openmoji
+
+
+https://iconify.design
+https://github.com/iconify/icon-sets
+
+https://api.iconify.design/openmoji:books.svg
+https://api.iconify.design/openmoji:automobile.svg
+https://api.iconify.design/fluent-emoji-flat:beverage-box.svg
+
+
+https://github.com/microsoft/fluentui-emoji

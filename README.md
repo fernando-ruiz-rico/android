@@ -72,3 +72,13 @@ Este tutorial profundiza en conceptos intermedios:
 * Interfaces y abstracción
 
 Ayuda a entender cómo diseñar programas más organizados y reutilizables.
+
+---
+
+### Kotlin Tour – Clases abiertas, selladas y enums (documentación oficial, nivel intermedio)
+
+[https://kotlinlang.org/docs/kotlin-tour-intermediate-open-special-classes.html](https://kotlinlang.org/docs/kotlin-tour-intermediate-open-special-classes.html)
+
+Este tutorial profundiza en las clases abiertas, selladas y enums.
+
+Ayuda a entender cómo diseñar programas aún más organizados y reutilizables.
