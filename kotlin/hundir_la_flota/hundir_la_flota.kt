@@ -1,9 +1,7 @@
-import javax.transaction.xa.Xid
 import kotlin.random.Random
-import kotlin.random.nextInt
 
 const val DIMENSION = 10
-const val MUNICION_MAXIMA = 1
+const val MUNICION_MAXIMA = 8
 
 enum class TipoBarco(val longitud: Int) {
     PORTAAVIONES(5),
@@ -35,14 +33,31 @@ object Juego {
     val impactosNecesarios = TipoBarco.values().sumOf({ it.longitud })
 }
 
+fun imprimirIndicesColumnas() {
+    print("   ")
+    for (columna in Juego.oceano.indices) {
+        print("$columna ")
+    }
+    println()
+}
+
 fun imprimirOceano(revelarTodo: Boolean) {
+    imprimirIndicesColumnas()
+
     for ((indexFila, fila) in Juego.oceano.withIndex()) {
         print("$indexFila| ")
         for (casilla in fila) {
-            print("$casilla ")
+            if (casilla == EstadoCasilla.BARCO && !revelarTodo) {
+                print("${EstadoCasilla.AGUA} ")
+            }
+            else {
+                print("$casilla ")
+            }
         }
         println("|$indexFila")
     }
+
+    imprimirIndicesColumnas()
 }
 
 fun pedirCoordenada(mensaje: String): Int {
@@ -75,9 +90,17 @@ fun realizarDisparo():Boolean {
         }
     }
 
-    Juego.oceano[fila][columna] = EstadoCasilla.TOCADO
+    var tocado = false
 
-    return false
+    if (Juego.oceano[fila][columna] == EstadoCasilla.BARCO) {
+        tocado = true
+        Juego.oceano[fila][columna] = EstadoCasilla.TOCADO
+    }
+    else {
+        Juego.oceano[fila][columna] = EstadoCasilla.FALLO
+    }
+
+    return tocado
 }
 
 fun colocarFlotaCompleta() {
@@ -136,7 +159,7 @@ fun colocarBarcoEnMatriz(fila:Int, columna:Int, longitud:Int, horizontal:Boolean
 }
 
 fun main() {
-    println("--- HUNDIR LA FLOTA ---")
+    println("---- HUNDIR LA FLOTA ----")
 
     colocarFlotaCompleta()
 
@@ -151,5 +174,24 @@ fun main() {
 
         var impacto = realizarDisparo()
         misilesRestantes--
+
+        if (impacto) {
+            aciertos++
+            println("¡IMPACTO CONFIRMADO!")
+        }
+        else {
+            println("¡HAS FALLADO")
+        }
+
+        if (aciertos == Juego.impactosNecesarios) {
+            juegoTerminado = true
+            imprimirOceano(true)
+            println("\n¡ENHORABUENA! HAS GANADO")
+        }
+        else if (misilesRestantes == 0) {
+            juegoTerminado = true
+            imprimirOceano(true)
+            println("\n¡MUNICION AGOTADA! HAS PERDIDO")
+        }
     }
 }
