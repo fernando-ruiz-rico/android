@@ -66,13 +66,44 @@ fun PantallaJuego() {
             fontSize = 16.sp
         )
 
+        Spacer(modifier = Modifier.height(16.dp))
+
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            Button(onClick = {
+                motorJuego.turno("IZQUIERDA")
+                refrescar++
+            }) { Text("👈")}
+
+            Button(onClick = {
+                motorJuego.turno("FUEGO")
+                refrescar++
+            }) { Text("🔥")}
+
+            Button(onClick = {
+                motorJuego.turno("DERECHA")
+                refrescar++
+            }) { Text("👉")}
+        }
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Button(onClick = {
+                motorJuego.turno("ESPERAR")
+                refrescar++
+            }) { Text("🛑")}
+
+            Button(onClick = {
+                motorJuego.turno("BOMBA")
+                refrescar++
+            }) { Text("🧨")}
+
             Button(onClick = {
                 motorJuego.reiniciar()
                 refrescar++
-            }) { Text("REINICIAR")}
+            }) { Text("♻️")}
         }
 
         Text(text = "", modifier = Modifier.size(if(refrescar > 0) 0.dp else 0.dp))

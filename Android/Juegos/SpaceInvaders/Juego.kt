@@ -101,7 +101,7 @@ class Juego {
         }
     }
 
-    fun generarPowerup(entidades: MutableList<Entidad>) {
+    fun generarPowerup() {
         val hayPowerupEnPantalla = entidades.any({ it.tipo == "POWERUP"})
 
         if (!hayPowerupEnPantalla && Math.random() < PROBABILIDAD_BOMBA) {
@@ -141,5 +141,96 @@ class Juego {
         }
 
         return mapaTexto;
+    }
+
+    fun turno(accion:String) {
+        if (vidas <= 0) return
+
+        mensaje = ""
+        generarPowerup()
+
+        if (accion == "FUEGO") {
+            entidades.add(Entidad(nave.x, nave.y, "BALA"))
+        }
+        else if (accion == "BOMBA") {
+            if (bombasMasivas > 0) {
+                bombasMasivas--
+                mensaje = "¡BOMBA MASIVA ACTIVADA! Aniquilación total."
+
+                val todosLosAliens = entidades.filter( { it.tipo == "ALIEN" })
+                puntos += (todosLosAliens.size * PUNTOS_POR_ALIEN)
+                entidades.removeAll(todosLosAliens)
+            }
+            else {
+                mensaje = "No tienes bombas. Atrapa todas las que puedas para poder lanzarlas."
+            }
+        }
+
+        for (entidad in entidades) {
+            entidad.mover(accion)
+        }
+
+        // Lista temporal para guardar las entidades que deben ser eliminadas (balas que chocan, aliens que llegan al final, etc.)
+        val paraBorrar = mutableListOf<Entidad>()
+
+        var invasionEnEsteTurno = false
+
+        // Verificamos colisiones y condiciones de fin de juego
+        for (entidad in entidades) {
+            if (entidad.y < 0 || entidad.y >= ALTO) {
+                if (entidad.tipo != "NAVE") paraBorrar.add(entidad)
+            }
+
+            // Verificamos si un alien ha llegado a la última fila (donde está la nave del jugador)
+            if (entidad.tipo == "ALIEN") {
+                if (entidad.y >= ALTO - 1) {
+                    paraBorrar.add(entidad)
+                    invasionEnEsteTurno = true
+                }
+                else {
+                    // Verificamos si una bala ha chocado con un alien
+                    for (otra in entidades) {
+                        if (entidad.tipo == "ALIEN" && otra.tipo == "BALA") {
+                            if (hayColision(entidad, otra)) {
+                                paraBorrar.add(entidad)
+                                paraBorrar.add(otra)
+                                puntos += PUNTOS_POR_ALIEN
+                                mensaje = "¡BOOM! Alien eliminado."
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (entidad.tipo == "POWERUP") {
+                if (hayColision(entidad, nave)) {
+                    paraBorrar.add(entidad)
+                    bombasMasivas++
+                    mensaje = "¡POWERUP RECOGIDO! Tienes $bombasMasivas bombas masivas"
+                }
+            }
+        }
+
+        if (invasionEnEsteTurno) {
+            vidas--
+            mensaje = "¡Cuidado! Los aliens han invadido la base. Pierdes 1 vida."
+
+            if (vidas <= 0) {
+                mensaje = "¡GAME OVER! Has perdido todas tus vidas. Pulsa REINICIAR"
+            }
+        }
+
+        // Eliminamos todas las entidades que deben ser borradas (aliens eliminados, balas que han salido del mapa, etc.)
+        entidades.removeAll(paraBorrar)
+
+        // Contamos cuántos aliens quedan en la lista
+        val alienRestantes = entidades.count({ it.tipo == "ALIEN" })
+
+        // Si no quedan aliens, el jugador gana
+        if (alienRestantes == 0) {
+            mensaje = "¡OLEADA $numeroOleada COMPLETADA!"
+            numeroOleada++
+            generarOleada()
+        }
     }
 }
