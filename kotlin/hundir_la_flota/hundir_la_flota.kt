@@ -1,7 +1,9 @@
+import javax.transaction.xa.Xid
 import kotlin.random.Random
+import kotlin.random.nextInt
 
 const val DIMENSION = 10
-const val MUNICION_MAXIMA = 5
+const val MUNICION_MAXIMA = 1
 
 enum class TipoBarco(val longitud: Int) {
     PORTAAVIONES(5),
@@ -78,8 +80,65 @@ fun realizarDisparo():Boolean {
     return false
 }
 
+fun colocarFlotaCompleta() {
+    for (barco in TipoBarco.values()) {
+        colocarBarcoAleatorio(barco)
+    }
+}
+
+fun colocarBarcoAleatorio(barco: TipoBarco) {
+    var colocado = false
+    while(!colocado) {
+        val fila = Random.nextInt(DIMENSION)
+        val columna = Random.nextInt(DIMENSION)
+        val horizontal = Random.nextBoolean()
+
+        if (esPosicionValida(fila, columna, barco.longitud, horizontal)) {
+            colocarBarcoEnMatriz(fila, columna, barco.longitud, horizontal)
+            colocado = true
+        }
+    }
+}
+
+fun esPosicionValida(fila:Int, columna:Int, longitud:Int, horizontal:Boolean): Boolean {
+    val anchoBarco = if (horizontal) longitud else 1
+    val altoBarco = if (horizontal) 1 else longitud
+
+    if (fila + altoBarco > DIMENSION || columna + anchoBarco > DIMENSION) {
+        return false
+    }
+
+    val filaInicio = (fila - 1).coerceAtLeast(0)
+    val columnaInicio = (columna - 1).coerceAtLeast(0)
+    val filaFin = (fila + altoBarco).coerceAtMost(DIMENSION - 1)
+    val columnaFin = (columna + anchoBarco).coerceAtMost(DIMENSION - 1)
+
+    for (i in filaInicio..filaFin) {
+        for (j in columnaInicio..columnaFin) {
+            if (Juego.oceano[i][j] != EstadoCasilla.AGUA) {
+                return false
+            }
+        }
+    }
+
+    return true
+}
+
+fun colocarBarcoEnMatriz(fila:Int, columna:Int, longitud:Int, horizontal:Boolean) {
+    for (i in 0 until longitud) {
+        if (horizontal) {
+            Juego.oceano[fila][columna + i] = EstadoCasilla.BARCO
+        }
+        else {
+            Juego.oceano[fila + i][columna] = EstadoCasilla.BARCO
+        }
+    }
+}
+
 fun main() {
     println("--- HUNDIR LA FLOTA ---")
+
+    colocarFlotaCompleta()
 
     var aciertos = 0
     var misilesRestantes = MUNICION_MAXIMA
