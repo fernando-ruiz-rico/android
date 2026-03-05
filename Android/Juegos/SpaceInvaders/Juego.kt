@@ -1,6 +1,6 @@
 package com.example.myapplication
 
-const val ANCHO = 12
+const val ANCHO = 11
 const val ALTO = 16
 const val ALIENS_POR_OLEADA = 3
 const val MAX_VIDAS = 3
@@ -38,10 +38,10 @@ class Entidad(var x: Int, var y: Int, val tipo: String) {
 
 fun obtenerIcono(tipo: String): String {
     return when (tipo) {
-        "NAVE" -> "A"
-        "ALIEN" -> "V"
-        "BALA" -> "|"
-        "POWERUP" -> "B"
+        "NAVE" -> "🚨"
+        "ALIEN" -> "👽"
+        "BALA" -> "♦️"
+        "POWERUP" -> "🧨"
         else -> "?"
     }
 }
@@ -122,7 +122,7 @@ class Juego {
         // Bucle anidado: Recorremos cada fila (y) y cada columna (x)
         for (y in 0 until ALTO) {
             for (x in 0 until ANCHO) {
-                var simbolo = "." // Por defecto dibujamos un punto (espacio vacío)
+                var simbolo = ". " // Por defecto dibujamos un punto (espacio vacío)
 
                 // Buscamos: ¿Hay alguna entidad en esta coordenada (x, y)?
                 // 'find' devuelve el objeto si lo encuentra, o null si no hay nada.
@@ -135,7 +135,7 @@ class Juego {
                 }
 
                 // Imprimimos el símbolo sin salto de línea
-                mapaTexto += "$simbolo "
+                mapaTexto += "$simbolo"
             }
             mapaTexto += "\n" // Al terminar la fila, hacemos un salto de línea
         }
@@ -206,7 +206,7 @@ class Juego {
                 if (hayColision(entidad, nave)) {
                     paraBorrar.add(entidad)
                     bombasMasivas++
-                    mensaje = "¡POWERUP RECOGIDO! Tienes $bombasMasivas bombas masivas"
+                    mensaje = "¡POWERUP! Tienes $bombasMasivas bombas masivas"
                 }
             }
         }

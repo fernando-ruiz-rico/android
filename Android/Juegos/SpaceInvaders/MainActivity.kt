@@ -69,7 +69,7 @@ fun PantallaJuego() {
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(15.dp)
         ) {
             Button(onClick = {
                 motorJuego.turno("IZQUIERDA")
@@ -79,7 +79,7 @@ fun PantallaJuego() {
             Button(onClick = {
                 motorJuego.turno("FUEGO")
                 refrescar++
-            }) { Text("🔥")}
+            }) { Text("♦️")}
 
             Button(onClick = {
                 motorJuego.turno("DERECHA")
@@ -88,12 +88,12 @@ fun PantallaJuego() {
         }
 
         Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(15.dp)
         ) {
             Button(onClick = {
                 motorJuego.turno("ESPERAR")
                 refrescar++
-            }) { Text("🛑")}
+            }) { Text("🟢")}
 
             Button(onClick = {
                 motorJuego.turno("BOMBA")
