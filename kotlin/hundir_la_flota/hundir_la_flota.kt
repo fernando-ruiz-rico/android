@@ -180,7 +180,7 @@ fun main() {
             println("¡IMPACTO CONFIRMADO!")
         }
         else {
-            println("¡HAS FALLADO")
+            println("¡HAS FALLADO!")
         }
 
         if (aciertos == Juego.impactosNecesarios) {
