@@ -69,8 +69,30 @@ class Juego {
         }
     }
 
+    fun obtenerMapaComoTexto(): String {
+        var texto = "\n"
+        for (c in 0 until COLUMNAS) {
+            texto += " $c "
+        }
+
+        texto += "\n+--------------------+\n"
+
+        // Recorremos cada fila para dibujar las fichas y los separadores
+        for (f in 0 until FILAS) {
+            texto += "|" // Borde izquierdo
+            for (c in 0 until COLUMNAS) {
+                texto += "${tablero[f][c]}|" // La ficha y el separador vertical
+            }
+            texto += "\n"
+        }
+
+        texto += "+--------------------+"
+
+        return texto
+    }
+
     fun turno(columna: Int) {
-        if (juegoTerminado || dificultadSeleccionada == null) return
+        //if (juegoTerminado || dificultadSeleccionada == null) return
 
         if (columnaValida(columna)) {
             colocarFicha(columna, Ficha.JUGADOR)

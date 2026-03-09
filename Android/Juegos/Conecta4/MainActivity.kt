@@ -46,6 +46,37 @@ fun PantallaJuego() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("*** CONECTA 4 ***", fontSize = 24.sp, modifier = Modifier.padding(bottom =16.dp))
+        Text("CONECTA 4", fontSize = 24.sp, modifier = Modifier.padding(bottom =16.dp))
+
+        Text(text = motorJuego.mensaje, fontSize = 20.sp, color = MaterialTheme.colorScheme.primary)
+
+        Text(
+            text = motorJuego.obtenerMapaComoTexto(),
+            fontFamily = FontFamily.Monospace,
+            fontSize = 25.sp,
+            lineHeight = 30.sp,
+            modifier = Modifier.padding(vertical = 15.dp)
+        )
+
+        if (!motorJuego.juegoTerminado) {
+            Row(horizontalArrangement = Arrangement.SpaceEvenly,
+                modifier = Modifier.fillMaxWidth())
+            {
+                for (c in 0 until motorJuego.COLUMNAS) {
+                    Button(
+                        onClick = {
+                            motorJuego.turno(c)
+                            refrescar++
+                        },
+                        modifier = Modifier.width(35.dp),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text(c.toString())
+                    }
+                }
+            }
+        }
     }
+
+    Text(text = "", modifier = Modifier.size(if(refrescar > 0) 0.dp else 0.dp))
 }
