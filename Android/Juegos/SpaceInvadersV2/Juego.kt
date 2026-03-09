@@ -202,7 +202,7 @@ class Juego {
         // Bucle anidado: Recorremos cada fila (y) y cada columna (x) de arriba a abajo, izquierda a derecha
         for (y in 0 until ALTO) {
             for (x in 0 until ANCHO) {
-                var simbolo = ". " // Por defecto dibujamos un punto (espacio vacío)
+                var simbolo = "▫️" // Por defecto dibujamos un cuadrado blanco pequeño (espacio vacío)
 
                 // Buscamos: ¿Hay alguna entidad en esta coordenada (x, y)?
                 // 'find' devuelve el objeto si lo encuentra, o null si no hay nada.
