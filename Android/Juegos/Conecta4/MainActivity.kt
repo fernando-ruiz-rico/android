@@ -48,6 +48,8 @@ fun PantallaJuego() {
     ) {
         Text("CONECTA 4", fontSize = 24.sp, modifier = Modifier.padding(bottom =16.dp))
 
+        //motorJuego.iniciarPartida(Dificultad.FACIL)
+
         Text(text = motorJuego.mensaje, fontSize = 20.sp, color = MaterialTheme.colorScheme.primary)
 
         Text(
