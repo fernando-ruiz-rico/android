@@ -91,6 +91,15 @@ fun PantallaJuego() {
                     }
                 }
             }
+            else {
+                Button(onClick = {
+                    motorJuego.dificultadSeleccionada = null
+                    motorJuego.mensaje = "Selecciona dificultad"
+                    refrescar++
+                }) {
+                    Text("Jugar otra vez")
+                }
+            }
         }
 
         Text(text = "", modifier = Modifier.size(if (refrescar > 0) 0.dp else 0.dp))
