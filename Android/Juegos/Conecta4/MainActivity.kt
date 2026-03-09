@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,5 +38,14 @@ class MainActivity : ComponentActivity() {
 // ============================================================================
 @Composable
 fun PantallaJuego() {
+    val motorJuego = remember { Juego() }
+    var refrescar by remember { mutableIntStateOf(0) }
 
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("*** CONECTA 4 ***", fontSize = 24.sp, modifier = Modifier.padding(bottom =16.dp))
+    }
 }
