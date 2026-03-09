@@ -200,12 +200,23 @@ class Juego {
     }
 
     fun turno(columna: Int) {
-        //if (juegoTerminado || dificultadSeleccionada == null) return
+        if (juegoTerminado || dificultadSeleccionada == null) return
 
         if (columnaValida(columna)) {
             colocarFicha(columna, Ficha.JUGADOR)
 
+            if (comprobarVictoria(Ficha.JUGADOR)) {
+                mensaje = "¡Enhorabuena, has ganado!"
+                juegoTerminado = true
+                return
+            }
+
             hacerMovimientoMaquina(dificultadSeleccionada)
+
+            if (comprobarVictoria(Ficha.MAQUINA)) {
+                mensaje = "Ha ganado el ordenador"
+                juegoTerminado = true
+            }
         }
     }
 }
