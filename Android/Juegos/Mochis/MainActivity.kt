@@ -39,5 +39,54 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun PantallaMochis() {
+    val motor = remember { MotorMochis() }
+    var tamanyoPantalla by remember { mutableStateOf(IntSize.Zero) }
+    var contadorFotogramas by remember { mutableStateOf(0) }
+    val medidorDeTexto = rememberTextMeasurer()
 
+    LaunchedEffect(Unit) {
+        while(true) {
+            withFrameNanos {
+                if (tamanyoPantalla != IntSize.Zero) {
+                    /*motor.actualizarFisicas(
+                        anchoPantalla = tamanyoPantalla.width.toFloat(),
+                        altoPantalla = tamanyoPantalla.height.toFloat()
+                    )*/
+                    contadorFotogramas++
+                }
+            }
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .onSizeChanged {
+                        nuevoTamanyo -> tamanyoPantalla = nuevoTamanyo
+                    }
+                    .pointerInput(Unit) {
+                        detectTapGestures {
+                            toque -> motor.tocar(toque.x, toque.y)
+                        }
+                    }
+            ) {
+                val frameActual = contadorFotogramas
+
+                for (mochi in motor.mochis) {
+                    val estiloTexto = TextStyle(fontSize = mochi.radio.sp)
+                    val medidas = medidorDeTexto.measure(mochi.emoji, style=estiloTexto)
+
+                    drawText(
+                        textLayoutResult = medidas,
+                        topLeft = Offset(
+                            x = mochi.x - (medidas.size.width / 2f),
+                            y = mochi.y - (medidas.size.height / 2f)
+                        )
+                    )
+                }
+            }
+        }
+    }
 }
