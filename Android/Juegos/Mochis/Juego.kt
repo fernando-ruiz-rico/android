@@ -25,12 +25,12 @@ data class Mochi(
 
 class MotorMochis {
     companion object {
-        const val MAX_MOCHIS = 50
+        const val MAX_MOCHIS = 1000
     }
 
     var mochis = mutableStateListOf<Mochi>()
 
-    val emojisDisponibles = listOf("🍡", "🍮", "🥟", "🍓", "☁️", "🥞", "😊")
+    val emojisDisponibles = listOf("🍡", "🍮", "🥟", "🍓", "🥞", "🥝", "🫒", "🥑", "🥕", "🥒", "🍥", "🥓", "🌮")
 
     fun tocar(xToque:Float, yToque:Float) {
         val nuevoMochi = Mochi(
@@ -41,5 +41,8 @@ class MotorMochis {
             emoji = emojisDisponibles.random()
         )
         mochis.add(nuevoMochi)
+        if (mochis.size > MAX_MOCHIS) {
+            mochis.removeFirstOrNull()
+        }
     }
 }

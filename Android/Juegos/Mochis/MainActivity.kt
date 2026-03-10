@@ -28,8 +28,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            val fondo = Brush.verticalGradient(
+                colors = listOf(Color(0xFFE3F2FD), Color(0xFF64B5F6))
+            )
+
             MaterialTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
+                Surface(
+                    modifier = Modifier.fillMaxSize().background(fondo),
+                    color = Color.Transparent
+                ) {
                     PantallaMochis()
                 }
             }
