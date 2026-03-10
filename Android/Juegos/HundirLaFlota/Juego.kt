@@ -32,7 +32,7 @@ class Juego {
 
     var aciertos = 0
     var misilesRestantes = MUNICION_MAXIMA
-    var juegoTerminado = false
+    var juegoTerminado = true
 
     var mensaje = "Pulsa iniciar para jugar"
 
@@ -98,5 +98,41 @@ class Juego {
         for (barco in TipoBarco.values()) {
             colocarBarcoAleatorio(barco)
         }
+    }
+
+    fun comprobarFinDeJuego() {
+        if (aciertos == impactosNecesarios) {
+            juegoTerminado = true
+            mensaje = "¡ENHORABUENA! HAS GANADO"
+        }
+        else if (misilesRestantes == 0) {
+            juegoTerminado = true
+            mensaje = "¡MUNICIÓN AGOTADA! HAS PERDIDO"
+        }
+    }
+
+    fun turno(fila:Int, columna:Int) {
+        if (juegoTerminado) return
+
+        val estado = oceano[fila][columna]
+
+        if (estado == EstadoCasilla.TOCADO || estado == EstadoCasilla.FALLO) {
+            mensaje = "Ya has disparado ahí"
+            return
+        }
+
+        misilesRestantes--
+
+        if (estado == EstadoCasilla.BARCO) {
+            oceano[fila][columna] = EstadoCasilla.TOCADO
+            aciertos++
+            mensaje = "¡IMPACTO CONFIRMADO!"
+        }
+        else {
+            oceano[fila][columna] = EstadoCasilla.FALLO
+            mensaje = "HAS FALLADO"
+        }
+
+        comprobarFinDeJuego()
     }
 }
