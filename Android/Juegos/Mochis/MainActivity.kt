@@ -96,7 +96,10 @@ fun PantallaMochis() {
                 val tiempoActual = System.currentTimeMillis()
 
                 for (mochi in motor.mochis) {
-                    val estiloTexto = TextStyle(fontSize = mochi.radio.sp)
+                    val milisegundosCreado = tiempoActual - mochi.tiempoCreacion
+                    val factorTamanyo = (milisegundosCreado / 250f).coerceIn(0f, 1f)
+
+                    val estiloTexto = TextStyle(fontSize = mochi.radio.sp * factorTamanyo)
                     val medidas = medidorDeTexto.measure(mochi.emoji, style=estiloTexto)
 
                     val flotacionY = (sin(tiempoActual / 500.0 + mochi.x / 100.0) * 15f).toFloat()
