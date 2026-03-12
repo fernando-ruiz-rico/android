@@ -69,6 +69,10 @@ fun PantallaMochis() {
         while(true) {
             withFrameNanos {
                 if (tamanyoPantalla != IntSize.Zero) {
+                    motor.actualizarFisicas(
+                        anchoPantalla = tamanyoPantalla.width.toFloat(),
+                        altoPantalla = tamanyoPantalla.height.toFloat()
+                    )
                     contadorFotogramas++
                 }
             }

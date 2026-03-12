@@ -1,6 +1,8 @@
 package com.example.myapplication
 
 import androidx.compose.runtime.mutableStateListOf
+import kotlin.math.abs
+import kotlin.random.Random
 
 data class Mochi(
     var x: Float,
@@ -17,6 +19,10 @@ class MotorMochis {
         const val MAX_MOCHIS = 1000
     }
 
+    private val gravedad = 0.5f
+    private val elasticidad = 0.75f
+    private val friccionSuelo = 0.9f
+
     var mochis = mutableStateListOf<Mochi>()
 
     val emojisDisponibles = listOf("🍡", "🍮", "🥟", "🍓", "🥞", "🥝", "🫒", "🥑", "🥕", "🥒", "🍥", "🥓", "🌮")
@@ -26,12 +32,46 @@ class MotorMochis {
             x = xToque,
             y = yToque,
             velocidadY = 0f,
-            velocidadX = 0f,
+            velocidadX = (Random.nextFloat() * 2f) - 1f,
             emoji = emojisDisponibles.random()
         )
         mochis.add(nuevoMochi)
         if (mochis.size > MAX_MOCHIS) {
             mochis.removeFirstOrNull()
+        }
+    }
+
+    fun actualizarFisicas(anchoPantalla:Float, altoPantalla:Float) {
+        for (mochi in mochis) {
+            mochi.velocidadY += gravedad
+            mochi.y += mochi.velocidadY
+            mochi.x += mochi.velocidadX
+
+            val limiteSuelo = altoPantalla - mochi.radio
+
+            if (mochi.y > limiteSuelo) {
+                mochi.y = limiteSuelo
+
+                if (abs(mochi.velocidadY) < 1.5f) {
+                    mochi.velocidadY = 0f
+                }
+                else {
+                    mochi.velocidadY = -mochi.velocidadY * elasticidad
+                }
+
+                mochi.velocidadX *= friccionSuelo
+            }
+
+            val limiteDerecha = anchoPantalla - mochi.radio
+
+            if (mochi.x < mochi.radio) {
+                mochi.x = mochi.radio
+                mochi.velocidadX = -mochi.velocidadX * elasticidad
+            }
+            else if (mochi.x > limiteDerecha) {
+                mochi.x = limiteDerecha
+                mochi.velocidadX = -mochi.velocidadX * elasticidad
+            }
         }
     }
 }
