@@ -11,7 +11,8 @@ data class Mochi(
     var velocidadX: Float = 0f,
     val radio: Float = 70f,
     var emoji: String,
-    val tiempoCreacion: Long = System.currentTimeMillis()
+    val tiempoCreacion: Long = System.currentTimeMillis(),
+    var explotado: Boolean = false
 ) {
     fun fueTocado(xDelDedo: Float, yDelDedo: Float): Boolean {
         val distanciaX = xDelDedo - x
@@ -29,38 +30,34 @@ class MotorMochis {
         const val MAX_MOCHIS = 100
     }
 
-    private val gravedad = 0.5f
+    private val gravedad = 0.05f
     private val elasticidad = 0.75f
     private val friccionSuelo = 0.9f
 
     var mochis = mutableStateListOf<Mochi>()
 
-    val emojisDisponibles = listOf("🍡", "🍮", "🥟", "🍓", "🥞", "🥝", "🫒", "🥑", "🥕", "🥒", "🍥", "🥓", "🌮")
+    val emojisDisponibles = listOf("🎈", "🫧", "🌸", "🦋")
 
     fun tocar(xToque:Float, yToque:Float) {
-        var tocoAlgunoExistente = false
-
         for (mochi in mochis.reversed()) {
             if (mochi.fueTocado(xToque, yToque)) {
-                mochi.velocidadY = -40f
-                mochi.velocidadX = (Random.nextFloat() * 10f) - 5f
-                tocoAlgunoExistente = true
+                mochi.explotado = true
                 break
             }
         }
+    }
 
-        if (!tocoAlgunoExistente) {
-            val nuevoMochi = Mochi(
-                x = xToque,
-                y = yToque,
-                velocidadY = 0f,
-                velocidadX = (Random.nextFloat() * 2f) - 1f,
-                emoji = emojisDisponibles.random()
-            )
-            mochis.add(nuevoMochi)
-            if (mochis.size > MAX_MOCHIS) {
-                mochis.removeFirstOrNull()
-            }
+    fun crearNuevoEmoji(anchoPantalla: Float, altoPantalla: Float) {
+        val nuevoMochi = Mochi(
+            x = Random.nextFloat() * anchoPantalla,
+            y = altoPantalla + 150f,
+            velocidadY = 0f,
+            velocidadX = (Random.nextFloat() * 2f) - 1f,
+            emoji = emojisDisponibles.random()
+        )
+        mochis.add(nuevoMochi)
+        if (mochis.size > MAX_MOCHIS) {
+            mochis.removeFirstOrNull()
         }
     }
 
@@ -69,34 +66,11 @@ class MotorMochis {
 
         for (mochi in mochis) {
             mochi.velocidadY += gravedad
-            mochi.y += mochi.velocidadY
-            mochi.x += mochi.velocidadX
+            mochi.y -= mochi.velocidadY
+        }
 
-            val limiteSuelo = altoPantalla - mochi.radio
-
-            if (mochi.y > limiteSuelo) {
-                mochi.y = limiteSuelo
-
-                if (abs(mochi.velocidadY) < 1.5f) {
-                    mochi.velocidadY = 0f
-                }
-                else {
-                    mochi.velocidadY = -mochi.velocidadY * elasticidad
-                }
-
-                mochi.velocidadX *= friccionSuelo
-            }
-
-            val limiteDerecha = anchoPantalla - mochi.radio
-
-            if (mochi.x < mochi.radio) {
-                mochi.x = mochi.radio
-                mochi.velocidadX = -mochi.velocidadX * elasticidad
-            }
-            else if (mochi.x > limiteDerecha) {
-                mochi.x = limiteDerecha
-                mochi.velocidadX = -mochi.velocidadX * elasticidad
-            }
+        if (Random.nextFloat() < 0.025) {
+            crearNuevoEmoji(anchoPantalla, altoPantalla)
         }
     }
 

@@ -136,7 +136,7 @@ fun PantallaMochis() {
         }
 
         Box(modifier = Modifier
-                .fillMaxSize()
+            .fillMaxSize()
         ) {
             Canvas(
                 modifier = Modifier
