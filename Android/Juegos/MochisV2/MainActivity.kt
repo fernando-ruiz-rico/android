@@ -8,8 +8,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -20,8 +22,10 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.dp
 import kotlin.math.sin
 
 class MainActivity : ComponentActivity() {
@@ -45,8 +49,8 @@ fun PantallaMochis() {
     val motor = remember { MotorMochis() }
     var tamanyoPantalla by remember { mutableStateOf(IntSize.Zero) }
     var contadorFotogramas by remember { mutableStateOf(0) }
+    var mostrarDialogoLimpiar by remember { mutableStateOf(false) }
     val medidorDeTexto = rememberTextMeasurer()
-
     val animacion = rememberInfiniteTransition()
 
     val faseOla by animacion.animateFloat(
@@ -79,10 +83,60 @@ fun PantallaMochis() {
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    if (mostrarDialogoLimpiar) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogoLimpiar = false },
+            title = { Text(text = "¿Borrar todos los emojis?")},
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        motor.limpiarPantalla()
+                        mostrarDialogoLimpiar = false
+                    }
+                ) {
+                    Text("Sí", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        mostrarDialogoLimpiar = false
+                    }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    Column(modifier = Modifier.fillMaxSize().background(fondoMarino)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 32.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Emojis: ${motor.mochis.size} / ${MotorMochis.MAX_MOCHIS}",
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = Color(0xFFE65100)
+            )
+
+            IconButton(
+                onClick = {
+                    if (motor.mochis.isNotEmpty()) {
+                        mostrarDialogoLimpiar = true
+                    }
+                }
+            ) {
+                Text("🧹", fontSize = 30.sp)
+            }
+        }
+
         Box(modifier = Modifier
                 .fillMaxSize()
-                .background(fondoMarino)
         ) {
             Canvas(
                 modifier = Modifier

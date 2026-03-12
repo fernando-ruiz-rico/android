@@ -99,4 +99,8 @@ class MotorMochis {
             }
         }
     }
+
+    fun limpiarPantalla() {
+        mochis.clear()
+    }
 }
