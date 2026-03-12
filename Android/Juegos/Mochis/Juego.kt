@@ -1,8 +1,6 @@
 package com.example.myapplication
 
 import androidx.compose.runtime.mutableStateListOf
-import kotlin.math.abs
-import kotlin.random.Random
 
 data class Mochi(
     var x: Float,
@@ -11,17 +9,7 @@ data class Mochi(
     var velocidadX: Float = 0f,
     val radio: Float = 70f,
     var emoji: String
-) {
-    fun fueTocado(xDelDedo:Float, yDelDedo:Float): Boolean {
-        val distanciaX = xDelDedo - x
-        val distanciaY = yDelDedo - y
-
-        val distanciaAlCuadrado = (distanciaX * distanciaX) + (distanciaY * distanciaY)
-        val radioAlCuadrado = radio * radio
-
-        return distanciaAlCuadrado <= (radioAlCuadrado * 1.5f)
-    }
-}
+)
 
 class MotorMochis {
     companion object {
