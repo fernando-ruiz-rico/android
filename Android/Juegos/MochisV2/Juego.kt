@@ -12,11 +12,21 @@ data class Mochi(
     val radio: Float = 70f,
     var emoji: String,
     val tiempoCreacion: Long = System.currentTimeMillis()
-)
+) {
+    fun fueTocado(xDelDedo: Float, yDelDedo: Float): Boolean {
+        val distanciaX = xDelDedo - x
+        val distanciaY = yDelDedo - y
+
+        val distanciaAlCuadrado = (distanciaX * distanciaX) + (distanciaY * distanciaY)
+        val radioAlCuadrado = radio * radio
+
+        return distanciaAlCuadrado <= (radioAlCuadrado * 1.5f)
+    }
+}
 
 class MotorMochis {
     companion object {
-        const val MAX_MOCHIS = 1000
+        const val MAX_MOCHIS = 100
     }
 
     private val gravedad = 0.5f
@@ -28,20 +38,35 @@ class MotorMochis {
     val emojisDisponibles = listOf("🍡", "🍮", "🥟", "🍓", "🥞", "🥝", "🫒", "🥑", "🥕", "🥒", "🍥", "🥓", "🌮")
 
     fun tocar(xToque:Float, yToque:Float) {
-        val nuevoMochi = Mochi(
-            x = xToque,
-            y = yToque,
-            velocidadY = 0f,
-            velocidadX = (Random.nextFloat() * 2f) - 1f,
-            emoji = emojisDisponibles.random()
-        )
-        mochis.add(nuevoMochi)
-        if (mochis.size > MAX_MOCHIS) {
-            mochis.removeFirstOrNull()
+        var tocoAlgunoExistente = false
+
+        for (mochi in mochis.reversed()) {
+            if (mochi.fueTocado(xToque, yToque)) {
+                mochi.velocidadY = -40f
+                mochi.velocidadX = (Random.nextFloat() * 10f) - 5f
+                tocoAlgunoExistente = true
+                break
+            }
+        }
+
+        if (!tocoAlgunoExistente) {
+            val nuevoMochi = Mochi(
+                x = xToque,
+                y = yToque,
+                velocidadY = 0f,
+                velocidadX = (Random.nextFloat() * 2f) - 1f,
+                emoji = emojisDisponibles.random()
+            )
+            mochis.add(nuevoMochi)
+            if (mochis.size > MAX_MOCHIS) {
+                mochis.removeFirstOrNull()
+            }
         }
     }
 
     fun actualizarFisicas(anchoPantalla:Float, altoPantalla:Float) {
+        if (anchoPantalla == 0f || altoPantalla == 0f) return
+
         for (mochi in mochis) {
             mochi.velocidadY += gravedad
             mochi.y += mochi.velocidadY
