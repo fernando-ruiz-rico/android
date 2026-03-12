@@ -1,118 +1,37 @@
 package com.example.myapplication
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.sp
-import kotlin.math.sin
+import androidx.compose.runtime.mutableStateListOf
 
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            MaterialTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = Color.Transparent
-                ) {
-                    PantallaMochis()
-                }
-            }
-        }
+data class Mochi(
+    var x: Float,
+    var y: Float,
+    var velocidadY: Float = 0f,
+    var velocidadX: Float = 0f,
+    val radio: Float = 70f,
+    var emoji: String,
+    val tiempoCreacion: Long = System.currentTimeMillis()
+)
+
+class MotorMochis {
+    companion object {
+        const val MAX_MOCHIS = 1000
     }
-}
 
-@Composable
-fun PantallaMochis() {
-    val motor = remember { MotorMochis() }
-    var tamanyoPantalla by remember { mutableStateOf(IntSize.Zero) }
-    var contadorFotogramas by remember { mutableStateOf(0) }
-    val medidorDeTexto = rememberTextMeasurer()
+    var mochis = mutableStateListOf<Mochi>()
 
-    val animacion = rememberInfiniteTransition()
+    val emojisDisponibles = listOf("🍡", "🍮", "🥟", "🍓", "🥞", "🥝", "🫒", "🥑", "🥕", "🥒", "🍥", "🥓", "🌮")
 
-    val faseOla by animacion.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(3000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
+    fun tocar(xToque:Float, yToque:Float) {
+        val nuevoMochi = Mochi(
+            x = xToque,
+            y = yToque,
+            velocidadY = 0f,
+            velocidadX = 0f,
+            emoji = emojisDisponibles.random()
         )
-    )
-
-    val azulClaro = Color(0xFFE3F2FD)
-    val azulOscuro = Color(0xFF64B5F6)
-
-    val colorArriba = lerp(azulClaro, azulOscuro, faseOla)
-    val colorAbajo = lerp(azulOscuro, azulClaro, faseOla)
-    val fondoMarino = Brush.verticalGradient(listOf(colorArriba, colorAbajo))
-
-    LaunchedEffect(Unit) {
-        while(true) {
-            withFrameNanos {
-                if (tamanyoPantalla != IntSize.Zero) {
-                    contadorFotogramas++
-                }
-            }
-        }
-    }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier
-                .fillMaxSize()
-                .background(fondoMarino)
-        ) {
-            Canvas(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .onSizeChanged {
-                            nuevoTamanyo -> tamanyoPantalla = nuevoTamanyo
-                    }
-                    .pointerInput(Unit) {
-                        detectTapGestures {
-                                toque -> motor.tocar(toque.x, toque.y)
-                        }
-                    }
-            ) {
-                val frameActual = contadorFotogramas
-                val tiempoActual = System.currentTimeMillis()
-
-                for (mochi in motor.mochis) {
-                    val milisegundosCreado = tiempoActual - mochi.tiempoCreacion
-                    val factorTamanyo = (milisegundosCreado / 250f).coerceIn(0f, 1f)
-
-                    val estiloTexto = TextStyle(fontSize = mochi.radio.sp * factorTamanyo)
-                    val medidas = medidorDeTexto.measure(mochi.emoji, style=estiloTexto)
-
-                    val flotacionY = (sin(tiempoActual / 500.0 + mochi.x / 100.0) * 15f).toFloat()
-
-                    drawText(
-                        textLayoutResult = medidas,
-                        topLeft = Offset(
-                            x = mochi.x - (medidas.size.width / 2f),
-                            y = mochi.y - (medidas.size.height / 2f) + flotacionY
-                        )
-                    )
-                }
-            }
+        mochis.add(nuevoMochi)
+        if (mochis.size > MAX_MOCHIS) {
+            mochis.removeFirstOrNull()
         }
     }
 }
