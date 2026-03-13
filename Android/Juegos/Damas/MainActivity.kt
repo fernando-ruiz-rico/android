@@ -1,0 +1,66 @@
+package com.example.myapplication
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            MaterialTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = Color.Transparent
+                ) {
+                    PantallaDamas()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PantallaDamas() {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("DAMAS", fontSize = 25.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 16.dp))
+
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            for (fila in 0 until 8) {
+                Row {
+                    for (columna in 0 until 8) {
+                        val fondoCasilla = when {
+                            (fila + columna) % 2 == 0 -> Color(0xFF000000)
+                            else -> Color(0xFFFFFFFF)
+                         }
+
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(fondoCasilla)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
