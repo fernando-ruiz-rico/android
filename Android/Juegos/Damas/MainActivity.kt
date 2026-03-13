@@ -35,6 +35,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun PantallaDamas() {
+    val motorJuego = remember { JuegoDamas() }
+
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -49,15 +51,19 @@ fun PantallaDamas() {
                 Row {
                     for (columna in 0 until 8) {
                         val fondoCasilla = when {
-                            (fila + columna) % 2 == 0 -> Color(0xFF000000)
-                            else -> Color(0xFFFFFFFF)
+                            (fila + columna) % 2 == 0 -> Color(0xFFB58863)
+                            else -> Color(0xFFF0D9B5)
                          }
 
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
-                                .background(fondoCasilla)
-                        )
+                                .background(fondoCasilla),
+                                contentAlignment = Alignment.Center
+                        ) {
+                            val pieza = motorJuego.tablero[fila][columna]
+                            Text(pieza.simbolo, fontSize = 20.sp)
+                        }
                     }
                 }
             }
