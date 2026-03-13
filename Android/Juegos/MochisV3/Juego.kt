@@ -1,6 +1,7 @@
 package com.example.myapplication
 
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -11,7 +12,7 @@ data class Mochi(
     var velocidadX: Float = 0f,
     val radio: Float = 70f,
     var emoji: String,
-    val tiempoCreacion: Long = System.currentTimeMillis(),
+    var tiempoExplotado: Long = 0L,
     var explotado: Boolean = false
 ) {
     fun fueTocado(xDelDedo: Float, yDelDedo: Float): Boolean {
@@ -21,18 +22,18 @@ data class Mochi(
         val distanciaAlCuadrado = (distanciaX * distanciaX) + (distanciaY * distanciaY)
         val radioAlCuadrado = radio * radio
 
-        return distanciaAlCuadrado <= (radioAlCuadrado * 1.5f)
+        return distanciaAlCuadrado <= (radioAlCuadrado * 3f)
     }
 }
 
 class MotorMochis {
     companion object {
-        const val MAX_MOCHIS = 100
+        const val MAX_MOCHIS = 1000
     }
 
-    private val gravedad = 0.05f
-    private val elasticidad = 0.75f
-    private val friccionSuelo = 0.9f
+    var puntuacion: Int = 0
+
+    private val gravedad = 0.01f
 
     var mochis = mutableStateListOf<Mochi>()
 
@@ -42,6 +43,8 @@ class MotorMochis {
         for (mochi in mochis.reversed()) {
             if (mochi.fueTocado(xToque, yToque)) {
                 mochi.explotado = true
+                mochi.tiempoExplotado = System.currentTimeMillis()
+                puntuacion++
                 break
             }
         }
@@ -65,11 +68,15 @@ class MotorMochis {
         if (anchoPantalla == 0f || altoPantalla == 0f) return
 
         for (mochi in mochis) {
-            mochi.velocidadY += gravedad
-            mochi.y -= mochi.velocidadY
+            if (!mochi.explotado) {
+                mochi.velocidadY += gravedad
+                mochi.y -= mochi.velocidadY
+            }
         }
 
-        if (Random.nextFloat() < 0.025) {
+        mochis.removeAll( { it.y <= -250f } )
+
+        if (Random.nextFloat() < 0.05) {
             crearNuevoEmoji(anchoPantalla, altoPantalla)
         }
     }

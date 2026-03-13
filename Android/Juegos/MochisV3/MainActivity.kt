@@ -118,7 +118,7 @@ fun PantallaMochis() {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Emojis: ${motor.mochis.size} / ${MotorMochis.MAX_MOCHIS}",
+                text = "Emojis: ${motor.puntuacion}",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 color = Color(0xFFE65100)
@@ -154,21 +154,35 @@ fun PantallaMochis() {
                 val tiempoActual = System.currentTimeMillis()
 
                 for (mochi in motor.mochis) {
-                    val milisegundosCreado = tiempoActual - mochi.tiempoCreacion
-                    val factorTamanyo = (milisegundosCreado / 250f).coerceIn(0f, 1f)
+                    if (mochi.explotado && mochi.y > 0) {
+                        val milisegundosExplotado = tiempoActual - mochi.tiempoExplotado
+                        val factorTamanyo = (milisegundosExplotado / 250f).coerceIn(0f, 1.25f)
 
-                    val estiloTexto = TextStyle(fontSize = mochi.radio.sp * factorTamanyo)
-                    val medidas = medidorDeTexto.measure(mochi.emoji, style=estiloTexto)
+                        val estiloTexto = TextStyle(fontSize = mochi.radio.sp * factorTamanyo)
+                        val medidas = medidorDeTexto.measure("✨", style = estiloTexto)
 
-                    val flotacionY = (sin(tiempoActual / 500.0 + mochi.x / 100.0) * 15f).toFloat()
-
-                    drawText(
-                        textLayoutResult = medidas,
-                        topLeft = Offset(
-                            x = mochi.x - (medidas.size.width / 2f),
-                            y = mochi.y - (medidas.size.height / 2f) + flotacionY
+                        drawText(
+                            textLayoutResult = medidas,
+                            topLeft = Offset(
+                                x = mochi.x - (medidas.size.width / 2f),
+                                y = mochi.y - (medidas.size.height / 2f)
+                            )
                         )
-                    )
+
+                        if (factorTamanyo >= 1.25f) mochi.y = -250f
+                    }
+                    else {
+                        val estiloTexto = TextStyle(fontSize = mochi.radio.sp )
+                        val medidas = medidorDeTexto.measure(mochi.emoji, style = estiloTexto)
+
+                        drawText(
+                            textLayoutResult = medidas,
+                            topLeft = Offset(
+                                x = mochi.x - (medidas.size.width / 2f),
+                                y = mochi.y - (medidas.size.height / 2f)
+                            )
+                        )
+                    }
                 }
             }
         }
