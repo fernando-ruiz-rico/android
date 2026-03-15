@@ -21,7 +21,7 @@ import kotlin.random.Random
 
 /**
  * Define los tipos de embarcaciones que componen la flota.
- * * @param longitud El número de casillas consecutivas que ocupa el barco en el tablero.
+ * @param longitud El número de casillas consecutivas que ocupa el barco en el tablero.
  */
 enum class TipoBarco(val longitud: Int) {
     PORTAAVIONES(5),
@@ -33,7 +33,7 @@ enum class TipoBarco(val longitud: Int) {
 
 /**
  * Representa los diferentes estados en los que puede estar una coordenada del tablero.
- * * @param simbolo El emoji que representa visualmente el estado de la casilla.
+ * @param simbolo El emoji que representa visualmente el estado de la casilla.
  */
 enum class EstadoCasilla(val simbolo:String) {
     AGUA("🟦"),
@@ -43,7 +43,7 @@ enum class EstadoCasilla(val simbolo:String) {
 
     /**
      * Sobrescribimos toString para facilitar la impresión del emoji en la interfaz.
-     * * @return El String que contiene el emoji asignado al estado.
+     * @return El String que contiene el emoji asignado al estado.
      */
     override fun toString(): String = simbolo
 }
