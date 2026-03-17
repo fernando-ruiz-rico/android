@@ -36,6 +36,15 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun PantallaDamas() {
     val motorJuego = remember { JuegoDamas() }
+    var refrescar by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(motorJuego.turnoActual) {
+        if (motorJuego.turnoActual == Jugador.NEGRO && !motorJuego.juegoTerminado) {
+            delay(500)
+            //motorJuego.jugarOrdenador()
+            refrescar++
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -46,20 +55,29 @@ fun PantallaDamas() {
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 16.dp))
 
+        Text(motorJuego.mensaje, fontSize = 20.sp,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 16.dp))
+
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             for (fila in 0 until 8) {
                 Row {
                     for (columna in 0 until 8) {
                         val fondoCasilla = when {
+                            fila == motorJuego.filaSeleccionada && columna == motorJuego.columnaSeleccionada -> Color(0xFF81C784)
                             (fila + columna) % 2 != 0 -> Color(0xFFB58863)
                             else -> Color(0xFFF0D9B5)
-                         }
+                        }
 
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
-                                .background(fondoCasilla),
-                                contentAlignment = Alignment.Center
+                                .background(fondoCasilla)
+                                .clickable() {
+                                    motorJuego.turno(fila, columna)
+                                    refrescar++
+                                },
+                            contentAlignment = Alignment.Center
                         ) {
                             val pieza = motorJuego.tablero[fila][columna]
                             Text(pieza.simbolo, fontSize = 20.sp)
@@ -69,4 +87,6 @@ fun PantallaDamas() {
             }
         }
     }
+
+    Text(text = "", modifier = Modifier.size(if (refrescar > 0) 0.dp else 0.dp))
 }

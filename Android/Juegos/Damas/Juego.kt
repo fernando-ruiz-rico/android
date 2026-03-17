@@ -15,12 +15,27 @@ enum class TipoPieza(val simbolo: String, val jugador:Jugador?) {
     DAMA_NEGRA("♛", Jugador.NEGRO)
 }
 
+data class MovimientoPosible(
+    val filaOrigen: Int,
+    val columnaOrigen: Int,
+    val filaDestino: Int,
+    val columnaDestino: Int,
+    val esCaptura: Boolean
+)
+
 class JuegoDamas {
     var tablero = MutableList(8) {
         MutableList(8) {
             TipoPieza.VACIO
         }
     }
+
+    var turnoActual = Jugador.BLANCO
+    var juegoTerminado = false
+    var mensaje = "Turno de las Blancas ⚪"
+
+    var filaSeleccionada = -1
+    var columnaSeleccionada = -1
 
     init {
         iniciarPartida()
@@ -39,5 +54,52 @@ class JuegoDamas {
                 }
             }
         }
+    }
+
+    fun turno(filaClic:Int, columnaClic:Int) {
+        if (juegoTerminado || turnoActual == Jugador.NEGRO) return
+
+        val piezaClic = tablero[filaClic][columnaClic]
+
+        if (filaSeleccionada == -1 && columnaSeleccionada == -1) {
+            if (piezaClic != TipoPieza.VACIO && piezaClic.jugador == turnoActual) {
+                filaSeleccionada = filaClic
+                columnaSeleccionada = columnaClic
+                mensaje = "Pieza seleccionada. Elije destino."
+            }
+            else {
+                mensaje = "Selecciona una de tus piezas"
+            }
+            return
+        }
+
+        if (piezaClic == TipoPieza.VACIO) {
+            if (intentarMovimiento(filaClic, columnaClic)) {
+                if (!juegoTerminado) {
+                    cambiarTurno()
+                }
+            }
+        }
+    }
+
+    fun cambiarTurno() {
+       turnoActual = if (turnoActual == Jugador.BLANCO) Jugador.NEGRO else Jugador.BLANCO
+    }
+
+    fun juegoOrdenador() {
+        if (juegoTerminado) return
+
+        cambiarTurno()
+    }
+
+    fun efectuarMovimiento(filaDestino:Int, columnaDestino:Int) {
+        tablero[filaDestino][columnaDestino] = tablero[filaSeleccionada][columnaSeleccionada]
+        tablero[filaSeleccionada][columnaSeleccionada] = TipoPieza.VACIO
+    }
+
+    fun intentarMovimiento(filaDestino:Int, columnaDestino:Int): Boolean {
+        efectuarMovimiento(filaDestino, columnaDestino)
+
+        return true
     }
 }
