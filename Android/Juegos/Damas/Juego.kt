@@ -4,7 +4,7 @@ import kotlin.math.abs
 
 enum class Jugador(val texto: String) {
     BLANCO("Blancas ⚪"),
-    NEGRO("Ordenador ⚫")
+    NEGRO("Negras ⚫")
 }
 
 enum class TipoPieza(val simbolo: String, val jugador:Jugador?) {
@@ -90,7 +90,8 @@ class JuegoDamas {
     }
 
     fun cambiarTurno() {
-       turnoActual = if (turnoActual == Jugador.BLANCO) Jugador.NEGRO else Jugador.BLANCO
+        turnoActual = if (turnoActual == Jugador.BLANCO) Jugador.NEGRO else Jugador.BLANCO
+        mensaje = "Turno de las ${turnoActual.texto}"
     }
 
     fun jugarOrdenador() {
@@ -120,13 +121,27 @@ class JuegoDamas {
                             if (dentroDelTablero1 && tablero[filaDest1][colDest1] == TipoPieza.VACIO) {
                                 movimientosPosibles.add(MovimientoPosible(fila, columna, filaDest1, colDest1, esCaptura = false))
                             }
+
+                            val filaDest2 = fila + (dirFila * 2)
+                            val colDest2 = columna + (dirColumna * 2)
+
+                            val dentroDelTablero2 = (filaDest2 in 0 until DIMENSION && colDest2 in 0 until DIMENSION)
+
+                            if (dentroDelTablero1 && dentroDelTablero2 && tablero[filaDest2][colDest2] == TipoPieza.VACIO) {
+                                val piezaIntermedia = tablero[filaDest1][colDest1]
+                                if (piezaIntermedia != TipoPieza.VACIO && piezaIntermedia.jugador == Jugador.BLANCO) {
+                                    movimientosPosibles.add(MovimientoPosible(fila, columna, filaDest2, colDest2, esCaptura = true))
+                                }
+                            }
                         }
                     }
                 }
             }
         }
 
-        val movimientoElegido = movimientosPosibles.random()
+        val movimientosDeCaptura = movimientosPosibles.filter({ it.esCaptura })
+
+        val movimientoElegido = if (movimientosDeCaptura.isNotEmpty()) movimientosDeCaptura.random() else movimientosPosibles.random()
 
         filaSeleccionada = movimientoElegido.filaOrigen
         columnaSeleccionada = movimientoElegido.columnaOrigen
@@ -143,9 +158,29 @@ class JuegoDamas {
     }
 
     fun intentarMovimiento(filaDestino:Int, columnaDestino:Int): Boolean {
-        efectuarMovimiento(filaDestino, columnaDestino)
+        val pieza = tablero[filaSeleccionada][columnaSeleccionada]
 
-        return true
+        val diferenciaFila = filaDestino - filaSeleccionada
+        val diferenciaColumna = columnaDestino - columnaSeleccionada
+
+        if (abs(diferenciaFila) == 1 && abs(diferenciaColumna) == 1) {
+            efectuarMovimiento(filaDestino, columnaDestino)
+            return true
+        }
+
+        if (abs(diferenciaFila) == 2 && abs(diferenciaColumna) == 2) {
+            val filaMedia = filaSeleccionada + (diferenciaFila / 2)
+            val columnaMedia = columnaSeleccionada + (diferenciaColumna / 2)
+            val piezaComida = tablero[filaMedia][columnaMedia]
+
+            if (piezaComida != TipoPieza.VACIO && piezaComida.jugador != turnoActual) {
+                tablero[filaMedia][columnaMedia] = TipoPieza.VACIO
+                efectuarMovimiento(filaDestino, columnaDestino)
+                return true
+            }
+        }
+
+        return false
     }
 
     fun deseleccionar() {
