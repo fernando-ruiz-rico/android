@@ -51,7 +51,7 @@ fun PantallaDamas() {
                 Row {
                     for (columna in 0 until 8) {
                         val fondoCasilla = when {
-                            (fila + columna) % 2 == 0 -> Color(0xFFB58863)
+                            (fila + columna) % 2 != 0 -> Color(0xFFB58863)
                             else -> Color(0xFFF0D9B5)
                          }
 
