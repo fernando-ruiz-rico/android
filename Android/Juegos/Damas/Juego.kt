@@ -80,18 +80,46 @@ class JuegoDamas {
             return
         }
 
+        if (filaClic == filaSeleccionada && columnaClic == columnaSeleccionada) {
+            deseleccionar()
+            mensaje = "Turno de las ${turnoActual.texto}"
+            return
+        }
+
+        if (piezaClic != TipoPieza.VACIO && piezaClic.jugador == turnoActual) {
+            filaSeleccionada = filaClic
+            columnaSeleccionada = columnaClic
+            mensaje = "Pieza seleccionada. Elije destino."
+            return
+        }
+
         if (piezaClic == TipoPieza.VACIO) {
             if (intentarMovimiento(filaClic, columnaClic)) {
                 if (!juegoTerminado) {
                     cambiarTurno()
                 }
             }
+            else {
+                mensaje = "Movimiento incorrecto"
+            }
         }
     }
 
     fun cambiarTurno() {
+        if (juegoTerminado) return
+
         turnoActual = if (turnoActual == Jugador.BLANCO) Jugador.NEGRO else Jugador.BLANCO
         mensaje = "Turno de las ${turnoActual.texto}"
+    }
+
+    fun coronarSiProcede(fila:Int, columna:Int) {
+        val pieza = tablero[fila][columna]
+        if (pieza == TipoPieza.PEON_BLANCO && fila == 0) {
+            tablero[fila][columna] = TipoPieza.DAMA_BLANCA
+        }
+        else if (pieza == TipoPieza.PEON_NEGRO && fila == DIMENSION - 1) {
+            tablero[fila][columna] = TipoPieza.DAMA_NEGRA
+        }
     }
 
     fun jugarOrdenador() {
@@ -139,6 +167,12 @@ class JuegoDamas {
             }
         }
 
+        if (movimientosPosibles.isEmpty()) {
+            juegoTerminado = true
+            mensaje = "¡Gana el jugador humano!"
+            return
+        }
+
         val movimientosDeCaptura = movimientosPosibles.filter({ it.esCaptura })
 
         val movimientoElegido = if (movimientosDeCaptura.isNotEmpty()) movimientosDeCaptura.random() else movimientosPosibles.random()
@@ -155,20 +189,27 @@ class JuegoDamas {
         tablero[filaDestino][columnaDestino] = tablero[filaSeleccionada][columnaSeleccionada]
         tablero[filaSeleccionada][columnaSeleccionada] = TipoPieza.VACIO
         deseleccionar()
+        coronarSiProcede(filaDestino, columnaDestino)
+        comprobarFinDejuego()
     }
 
     fun intentarMovimiento(filaDestino:Int, columnaDestino:Int): Boolean {
         val pieza = tablero[filaSeleccionada][columnaSeleccionada]
+        val esDama = (pieza == TipoPieza.DAMA_BLANCA || pieza == TipoPieza.DAMA_NEGRA)
 
         val diferenciaFila = filaDestino - filaSeleccionada
         val diferenciaColumna = columnaDestino - columnaSeleccionada
 
-        if (abs(diferenciaFila) == 1 && abs(diferenciaColumna) == 1) {
+        val direccioncorrecta = esDama ||
+                (pieza == TipoPieza.PEON_BLANCO && diferenciaFila < 0) ||
+                (pieza == TipoPieza.PEON_NEGRO && diferenciaFila > 0)
+
+        if (abs(diferenciaFila) == 1 && abs(diferenciaColumna) == 1 && direccioncorrecta) {
             efectuarMovimiento(filaDestino, columnaDestino)
             return true
         }
 
-        if (abs(diferenciaFila) == 2 && abs(diferenciaColumna) == 2) {
+        if (abs(diferenciaFila) == 2 && abs(diferenciaColumna) == 2 && direccioncorrecta) {
             val filaMedia = filaSeleccionada + (diferenciaFila / 2)
             val columnaMedia = columnaSeleccionada + (diferenciaColumna / 2)
             val piezaComida = tablero[filaMedia][columnaMedia]
@@ -181,6 +222,27 @@ class JuegoDamas {
         }
 
         return false
+    }
+
+    fun comprobarFinDejuego() {
+        var blancasVivas = false
+        var negrasVivas = false
+
+        for (fila in 0 until DIMENSION) {
+            for (columna in 0 until DIMENSION) {
+                if (tablero[fila][columna].jugador == Jugador.BLANCO) blancasVivas = true
+                if (tablero[fila][columna].jugador == Jugador.NEGRO) negrasVivas = true
+            }
+        }
+
+        if (!blancasVivas) {
+            juegoTerminado = true
+            mensaje = "¡Has perdido! :-)"
+        }
+        else if (!negrasVivas) {
+            juegoTerminado = true
+            mensaje = "¡Has ganado! :-("
+        }
     }
 
     fun deseleccionar() {
