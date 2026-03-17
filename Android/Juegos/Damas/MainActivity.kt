@@ -41,7 +41,7 @@ fun PantallaDamas() {
     LaunchedEffect(motorJuego.turnoActual) {
         if (motorJuego.turnoActual == Jugador.NEGRO && !motorJuego.juegoTerminado) {
             delay(500)
-            //motorJuego.jugarOrdenador()
+            motorJuego.jugarOrdenador()
             refrescar++
         }
     }

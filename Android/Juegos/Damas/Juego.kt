@@ -24,6 +24,8 @@ data class MovimientoPosible(
 )
 
 class JuegoDamas {
+    val DIMENSION = 8
+
     var tablero = MutableList(8) {
         MutableList(8) {
             TipoPieza.VACIO
@@ -32,7 +34,7 @@ class JuegoDamas {
 
     var turnoActual = Jugador.BLANCO
     var juegoTerminado = false
-    var mensaje = "Turno de las Blancas ⚪"
+    var mensaje = "Turno de las ${turnoActual.texto}"
 
     var filaSeleccionada = -1
     var columnaSeleccionada = -1
@@ -54,6 +56,11 @@ class JuegoDamas {
                 }
             }
         }
+
+        turnoActual = Jugador.BLANCO
+        deseleccionar()
+        juegoTerminado = false
+        mensaje = "Turno de las ${turnoActual.texto}"
     }
 
     fun turno(filaClic:Int, columnaClic:Int) {
@@ -86,8 +93,45 @@ class JuegoDamas {
        turnoActual = if (turnoActual == Jugador.BLANCO) Jugador.NEGRO else Jugador.BLANCO
     }
 
-    fun juegoOrdenador() {
+    fun jugarOrdenador() {
         if (juegoTerminado) return
+
+        val movimientosPosibles = mutableListOf<MovimientoPosible>()
+
+        val direcciones = listOf(Pair(1,1), Pair(1, -1), Pair(-1, 1), Pair(-1, -1))
+
+        for (fila in 0 until DIMENSION) {
+            for (columna in 0 until DIMENSION) {
+                val pieza = tablero[fila][columna]
+
+                if (pieza.jugador == Jugador.NEGRO) {
+                    val esDama = (pieza  == TipoPieza.DAMA_NEGRA)
+
+                    for (direccion in direcciones) {
+                        val dirFila = direccion.first
+                        val dirColumna = direccion.second
+
+                        if (esDama || dirFila > 0) {
+                            val filaDest1 = fila + dirFila
+                            val colDest1 = columna + dirColumna
+
+                            val dentroDelTablero1 = (filaDest1 in 0 until DIMENSION && colDest1 in 0 until DIMENSION)
+
+                            if (dentroDelTablero1 && tablero[filaDest1][colDest1] == TipoPieza.VACIO) {
+                                movimientosPosibles.add(MovimientoPosible(fila, columna, filaDest1, colDest1, esCaptura = false))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        val movimientoElegido = movimientosPosibles.random()
+
+        filaSeleccionada = movimientoElegido.filaOrigen
+        columnaSeleccionada = movimientoElegido.columnaOrigen
+
+        intentarMovimiento(movimientoElegido.filaDestino, movimientoElegido.columnaDestino)
 
         cambiarTurno()
     }
@@ -95,11 +139,17 @@ class JuegoDamas {
     fun efectuarMovimiento(filaDestino:Int, columnaDestino:Int) {
         tablero[filaDestino][columnaDestino] = tablero[filaSeleccionada][columnaSeleccionada]
         tablero[filaSeleccionada][columnaSeleccionada] = TipoPieza.VACIO
+        deseleccionar()
     }
 
     fun intentarMovimiento(filaDestino:Int, columnaDestino:Int): Boolean {
         efectuarMovimiento(filaDestino, columnaDestino)
 
         return true
+    }
+
+    fun deseleccionar() {
+        filaSeleccionada = -1
+        columnaSeleccionada = -1
     }
 }
