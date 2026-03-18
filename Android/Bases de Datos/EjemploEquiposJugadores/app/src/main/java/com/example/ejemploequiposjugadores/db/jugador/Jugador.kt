@@ -10,8 +10,8 @@ import com.example.ejemploequiposjugadores.db.equipo.Equipo
   foreignKeys = [
       ForeignKey(
         entity = Equipo::class,
-        parentColumns = ["id"],
-        childColumns = ["equipoId"],
+        parentColumns = ["id"], // Clave primaria del equipo
+        childColumns = ["equipoId"], // Clave ajena del jugador
         onDelete = ForeignKey.CASCADE, // Cuando borramos el equipo, se borran los jugadores
       ),
   ],

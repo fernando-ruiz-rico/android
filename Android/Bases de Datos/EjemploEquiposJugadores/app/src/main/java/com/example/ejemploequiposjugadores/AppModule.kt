@@ -11,7 +11,7 @@ import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
 
 @Module // Indicamos a Koin que es un módulo
-@ComponentScan("com.example.ejemploproductos") // Paquete principal de la aplicación para que busque todo
+@ComponentScan("com.example.ejemploequiposjugadores") // Paquete principal de la aplicación para que busque todo
 @Configuration // Permite la búsqueda automática y registro de otros módulos
 class AppModule {
   @Single
