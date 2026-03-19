@@ -2,9 +2,19 @@
  * ==============================================================================
  * JUEGO 3: MODO ARCADE (Explotar Globos/Burbujas)
  * ==============================================================================
- * Objetivo: Minijuego procedimental. Aquí el ordenador genera globos que flotan
- * solos desde abajo (Físicas invertidas), y el jugador debe atraparlos (explotar) 
- * con el dedo para ganar puntos.
+ * Objetivo del programa:
+ * Minijuego procedimental. Aquí el ordenador genera globos que flotan solos desde
+ * abajo (Físicas invertidas), y el jugador debe atraparlos (explotar) con el dedo 
+ * para ganar puntos.
+ * * Qué aprenderás de Kotlin y programación con este código:
+ * 1. Gestión de estados complejos: Uso de variables booleanas (`explotado`) para 
+ * cambiar el comportamiento de un objeto vivo a inerte.
+ * 2. Generación procedimental: Creación automática y aleatoria de elementos
+ * usando probabilidades (`Random.nextFloat() < 0.05`).
+ * 3. Lógica condicional en dibujo: Dibujar de forma distinta en el Canvas según 
+ * el estado del objeto (vivo vs explotado).
+ * 4. Limpieza de memoria (Garbage Collection manual): Borrar elementos que ya 
+ * no se ven en pantalla usando `removeAll`.
  * ==============================================================================
  */
 package com.example.myapplication
@@ -32,7 +42,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.random.Random
 
+/**
+ * Gestor principal que controla la generación, movimiento y colisiones del juego Arcade.
+ */
 class MotorArcade {
+    /**
+     * Representa un elemento interactivo que flota en la pantalla.
+     *
+     * @property x Coordenada horizontal actual en la pantalla.
+     * @property y Coordenada vertical actual en la pantalla.
+     * @property velocidadY Aceleración acumulada en el eje vertical (flotabilidad).
+     * @property velocidadX Velocidad constante en el eje horizontal.
+     * @property radio Tamaño del área interactiva (hitbox) del elemento.
+     * @property emoji Símbolo visual que se mostrará en pantalla.
+     * @property tiempoExplotado Marca de tiempo exacta de cuándo fue tocado (para animación).
+     * @property explotado Estado booleano: 'true' si ya lo pinchamos, 'false' si sigue jugando.
+     */
     data class Mochi(
         var x: Float,
         var y: Float,
@@ -43,22 +68,34 @@ class MotorArcade {
         var tiempoExplotado: Long = 0L, // Cuándo lo tocamos (para la animación de explosión)
         var explotado: Boolean = false  // ¿Sigue jugando o ya lo pinchamos?
     ) {
+        /**
+         * Comprueba si las coordenadas del toque impactan dentro de este elemento.
+         *
+         * @param xDelDedo Coordenada horizontal del toque.
+         * @param yDelDedo Coordenada vertical del toque.
+         * @return `true` si se acertó, `false` si el toque fue fuera.
+         */
         fun fueTocado(xDelDedo: Float, yDelDedo: Float): Boolean {
             val distX = xDelDedo - x; val distY = yDelDedo - y
+            // Se multiplica por 3f para crear una "hitbox" más generosa y amigable.
             return (distX * distX) + (distY * distY) <= (radio * radio * 3f)
         }
     }
 
     companion object {
-        const val MAX_MOCHIS = 1000
+        const val MAX_MOCHIS = 1000 // Límite para proteger la memoria RAM del dispositivo
     }
 
-    var puntuacion: Int = 0
-    private val gravedad = 0.01f
+    var puntuacion: Int = 0 // Marcador global del jugador
+    private val gravedad = 0.01f // Actúa como flotabilidad hacia arriba al restarse
     var mochis = mutableStateListOf<Mochi>()
     val emojisDisponibles = listOf("🎈", "🫧", "🌸", "🦋")
 
+    /**
+     * Procesa la interacción del usuario. Si toca un globo vivo, lo explota.
+     */
     fun tocar(xToque: Float, yToque: Float) {
+        // Se recorre al revés para detectar primero los que se dibujan por encima
         for (mochi in mochis.reversed()) {
             if (mochi.fueTocado(xToque, yToque) && !mochi.explotado) {
                 mochi.explotado = true // Lo marcamos como muerto
@@ -69,6 +106,9 @@ class MotorArcade {
         }
     }
 
+    /**
+     * Motor principal de físicas. Actualiza el estado de los globos frame a frame.
+     */
     fun actualizarFisicas(anchoPantalla: Float, altoPantalla: Float) {
         if (anchoPantalla == 0f || altoPantalla == 0f) return
 
@@ -81,8 +121,10 @@ class MotorArcade {
             }
         }
 
+        // LIMPIEZA DE MEMORIA: Borramos los que salieron de la pantalla por arriba
         mochis.removeAll { it.y <= -250f }
 
+        // GENERACIÓN PROCEDIMENTAL: 5% de probabilidad en cada frame de crear un globo nuevo
         if (Random.nextFloat() < 0.05) {
             mochis.add(Mochi(
                 x = Random.nextFloat() * anchoPantalla, // Posición horizontal en cualquier punto
@@ -90,16 +132,23 @@ class MotorArcade {
                 velocidadX = (Random.nextFloat() * 2f) - 1f,
                 emoji = emojisDisponibles.random()
             ))
+            // Si hay demasiados, eliminamos el más antiguo
             if (mochis.size > MAX_MOCHIS) mochis.removeFirstOrNull()
         }
     }
 
+    /**
+     * Reinicia el juego, vaciando la pantalla y poniendo los puntos a cero.
+     */
     fun limpiarPantalla() {
         mochis.clear()
         puntuacion = 0 // Al reiniciar, también ponemos los puntos a cero
     }
 }
 
+/**
+ * Interfaz gráfica del modo Arcade. Maneja el bucle de juego y el Canvas.
+ */
 @Composable
 fun PantallaArcade(alVolver: () -> Unit) {
     val motor = remember { MotorArcade() }
@@ -108,6 +157,7 @@ fun PantallaArcade(alVolver: () -> Unit) {
     var mostrarDialogo by remember { mutableStateOf(false) }
     val medidorDeTexto = rememberTextMeasurer()
 
+    // Fondo animado: Un degradado que oscila suavemente (atardecer rosa)
     val animacion = rememberInfiniteTransition()
     val faseOla by animacion.animateFloat(
         initialValue = 0f, targetValue = 1f,
@@ -118,17 +168,19 @@ fun PantallaArcade(alVolver: () -> Unit) {
         androidx.compose.ui.graphics.lerp(Color(0xFFF06292), Color(0xFFFCE4EC), faseOla)
     ))
 
+    // BUCLE DE JUEGO PRINCIPAL (Game Loop)
     LaunchedEffect(Unit) {
         while(true) {
             withFrameNanos {
                 if (tamanyoPantalla != IntSize.Zero) {
                     motor.actualizarFisicas(tamanyoPantalla.width.toFloat(), tamanyoPantalla.height.toFloat())
-                    contadorFotogramas++
+                    contadorFotogramas++ // Fuerza a Compose a redibujar el Canvas
                 }
             }
         }
     }
 
+    // CUADRO DE DIÁLOGO DE CONFIRMACIÓN
     if (mostrarDialogo) {
         AlertDialog(
             onDismissRequest = { mostrarDialogo = false },
@@ -138,7 +190,9 @@ fun PantallaArcade(alVolver: () -> Unit) {
         )
     }
 
+    // INTERFAZ DE USUARIO (HUD y Lienzo)
     Column(modifier = Modifier.fillMaxSize().background(fondo)) {
+        // Cabecera con botón de retroceso, puntuación y botón de reset
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 32.dp),
             horizontalArrangement = Arrangement.SpaceBetween,

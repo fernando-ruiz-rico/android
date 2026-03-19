@@ -2,8 +2,17 @@
  * ==============================================================================
  * JUEGO 2: MODO FÍSICAS (Gravedad y Rebotes)
  * ==============================================================================
- * Objetivo: Entorno donde los mochis se comportan como pelotas físicas reales.
- * Caen por la gravedad, rebotan perdiendo energía, y podemos golpearlos al tocarlos.
+ * Objetivo del programa:
+ * Entorno donde los mochis se comportan como pelotas físicas reales. Caen por 
+ * la gravedad, rebotan perdiendo energía contra el suelo y los bordes, y 
+ * podemos golpearlos (aplicar fuerzas) al tocarlos.
+ * * Qué aprenderás de Kotlin y programación con este código:
+ * 1. Simulación de Físicas 2D: Implementación de gravedad, inercia, elasticidad
+ * (pérdida de energía al rebotar) y fricción.
+ * 2. Detección de colisiones (AABB / Círculos): Cómo calcular cuándo un objeto 
+ * toca los límites de la pantalla y reaccionar invirtiendo vectores.
+ * 3. Optimización de bucles: Reducción de elementos máximos para no saturar la 
+ * CPU con cálculos matemáticos complejos en cada frame.
  * ==============================================================================
  */
 package com.example.myapplication
@@ -34,13 +43,30 @@ import kotlin.math.abs
 import kotlin.math.sin
 import kotlin.random.Random
 
+/**
+ * Gestor matemático que calcula las trayectorias físicas de todos los elementos.
+ */
 class MotorFisicas {
+    /**
+     * Representa un elemento con propiedades físicas simuladas.
+     *
+     * @property x Coordenada horizontal.
+     * @property y Coordenada vertical.
+     * @property velocidadY Aceleración actual en el eje vertical (afectada por gravedad).
+     * @property velocidadX Velocidad actual en el eje horizontal (afectada por fricción).
+     * @property radio Tamaño físico del objeto para el cálculo de colisiones.
+     * @property emoji Símbolo visual a dibujar.
+     * @property tiempoCreacion Marca de tiempo para animar el "nacimiento" del objeto.
+     */
     data class Mochi(
         var x: Float, var y: Float,
         var velocidadY: Float = 0f, // Empieza a 0, pero la gravedad la aumentará para que caiga
         var velocidadX: Float = 0f,
         val radio: Float = 70f, var emoji: String, val tiempoCreacion: Long = System.currentTimeMillis()
     ) {
+        /**
+         * Comprueba si el usuario ha tocado este objeto en concreto.
+         */
         fun fueTocado(xDelDedo: Float, yDelDedo: Float): Boolean {
             val distX = xDelDedo - x
             val distY = yDelDedo - y
@@ -52,6 +78,7 @@ class MotorFisicas {
         const val MAX_MOCHIS = 100 // Reducimos el máximo a 100 porque calcular colisiones es costoso para la CPU
     }
 
+    // CONSTANTES FÍSICAS
     private val gravedad = 0.5f       // Píxeles de velocidad hacia abajo que ganan en cada fotograma
     private val elasticidad = 0.75f   // Cuando chocan, mantienen un 75% de su velocidad (pierden un 25%)
     private val friccionSuelo = 0.9f  // Cuando ruedan por el suelo, el rozamiento frena su velocidad lateral
@@ -59,11 +86,16 @@ class MotorFisicas {
     var mochis = mutableStateListOf<Mochi>()
     val emojisDisponibles = listOf("🍡", "🍮", "🥟", "🍓", "🥞", "🥝", "🫒", "🥑", "🥕", "🥒", "🍥", "🥓", "🌮")
 
+    /**
+     * Gestiona el toque en pantalla. Si tocamos un emoji, le aplicamos una "fuerza" (impulso).
+     * Si tocamos un espacio vacío, creamos un emoji nuevo.
+     */
     fun tocar(xToque: Float, yToque: Float) {
         var toco = false
 
         for (mochi in mochis.reversed()) {
             if (mochi.fueTocado(xToque, yToque)) {
+                // Le damos un "golpe" hacia arriba y un poco de forma lateral aleatoria
                 mochi.velocidadY = -40f
                 mochi.velocidadX = (Random.nextFloat() * 10f) - 5f
                 toco = true
@@ -71,6 +103,7 @@ class MotorFisicas {
             }
         }
 
+        // Si no golpeamos nada, creamos uno nuevo en esa posición
         if (!toco) {
             mochis.add(Mochi(
                 x = xToque, y = yToque,
@@ -81,6 +114,9 @@ class MotorFisicas {
         }
     }
 
+    /**
+     * El corazón matemático del modo físicas. Calcula el movimiento de cada frame.
+     */
     fun actualizarFisicas(anchoPantalla: Float, altoPantalla: Float) {
         if (anchoPantalla == 0f || altoPantalla == 0f) return // Prevención de errores si aún no tenemos pantalla
 
@@ -112,19 +148,25 @@ class MotorFisicas {
 
             // 4. Colisiones Laterales (Paredes izquierda y derecha)
             if (mochi.x < mochi.radio) {
-                mochi.x = mochi.radio
-                mochi.velocidadX = -mochi.velocidadX * elasticidad
+                mochi.x = mochi.radio // Evitamos que salga por la izquierda
+                mochi.velocidadX = -mochi.velocidadX * elasticidad // Rebote horizontal
             }
             else if (mochi.x > anchoPantalla - mochi.radio) {
-                mochi.x = anchoPantalla - mochi.radio
-                mochi.velocidadX = -mochi.velocidadX * elasticidad
+                mochi.x = anchoPantalla - mochi.radio // Evitamos que salga por la derecha
+                mochi.velocidadX = -mochi.velocidadX * elasticidad // Rebote horizontal
             }
         }
     }
 
+    /**
+     * Borra todos los objetos de la física.
+     */
     fun limpiarPantalla() = mochis.clear()
 }
 
+/**
+ * Interfaz de Compose para la simulación física.
+ */
 @Composable
 fun PantallaFisicas(alVolver: () -> Unit) {
     val motor = remember { MotorFisicas() }
@@ -135,6 +177,7 @@ fun PantallaFisicas(alVolver: () -> Unit) {
 
     val medidorDeTexto = rememberTextMeasurer()
 
+    // Fondo animado azul
     val animacion = rememberInfiniteTransition()
     val faseOla by animacion.animateFloat(
         initialValue = 0f, targetValue = 1f,
@@ -146,6 +189,7 @@ fun PantallaFisicas(alVolver: () -> Unit) {
         androidx.compose.ui.graphics.lerp(Color(0xFF64B5F6), Color(0xFFE3F2FD), faseOla)
     ))
 
+    // BUCLE PRINCIPAL DE FÍSICAS
     LaunchedEffect(Unit) {
         while(true) {
             withFrameNanos {
@@ -169,6 +213,7 @@ fun PantallaFisicas(alVolver: () -> Unit) {
     }
 
     Column(modifier = Modifier.fillMaxSize().background(fondo)) {
+        // Cabecera superior (HUD)
         Row(
             modifier = Modifier.fillMaxWidth().padding(all = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -196,9 +241,11 @@ fun PantallaFisicas(alVolver: () -> Unit) {
                 val frameActual = contadorFotogramas
 
                 for (mochi in motor.mochis) {
+                    // Animación de aparición suave ("Pop-in") de 250ms
                     val milisegundosCreado = tiempoActual - mochi.tiempoCreacion
                     val factorTamanyo = (milisegundosCreado / 250f).coerceIn(0f, 1f)
 
+                    // Un pequeño efecto extra: flotación oscilatoria basada en el tiempo (seno)
                     val flotacionY = (sin(tiempoActual / 500.0 + mochi.x / 100.0) * 15f).toFloat()
 
                     val estiloTexto = TextStyle(fontSize = mochi.radio.sp * factorTamanyo)
