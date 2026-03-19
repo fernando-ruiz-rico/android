@@ -200,6 +200,9 @@ fun PantallaConecta4(volverAlMenu: () -> Unit) {
 
 @Composable
 fun PantallaHundirLaFlota(volverAlMenu: () -> Unit) {
+    val motorJuego = remember { JuegoHundirFlota() }
+    var refrescar by remember { mutableIntStateOf(0) }
+
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -213,11 +216,97 @@ fun PantallaHundirLaFlota(volverAlMenu: () -> Unit) {
         }
 
         Text("HUNDIR LA FLOTA", fontSize = 24.sp, modifier = Modifier.padding(bottom = 16.dp))
+
+        if (motorJuego.juegoTerminado && motorJuego.misilesRestantes == JuegoHundirFlota.MUNICION_MAXIMA) {
+            Text(motorJuego.mensaje, modifier = Modifier.padding(bottom = 16.dp))
+            Button(onClick = {
+                motorJuego.iniciarPartida()
+                refrescar++
+            }) {
+                Text("Iniciar partida")
+            }
+        } else {
+            Text(motorJuego.mensaje, fontSize = 18.sp, color = MaterialTheme.colorScheme.primary)
+            Text("Misiles: ${motorJuego.misilesRestantes} | Aciertos: ${motorJuego.aciertos}/${motorJuego.impactosNecesarios} ")
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // TABLERO ESTILO RADAR / OCÉANO
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth() // Ocupa todo el ancho
+                    .background(Color(0xFF01579B), shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)) // Borde azul oscuro
+                    .padding(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                for (f in 0 until JuegoHundirFlota.DIMENSION) {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        for (c in 0 until JuegoHundirFlota.DIMENSION) {
+                            val estado = motorJuego.oceano[f][c]
+                            var simbolo = estado.simbolo
+                            if (estado == JuegoHundirFlota.EstadoCasilla.BARCO && !motorJuego.juegoTerminado) {
+                                simbolo = JuegoHundirFlota.EstadoCasilla.AGUA.simbolo
+                            }
+
+                            val esAgua = (simbolo == JuegoHundirFlota.EstadoCasilla.AGUA.simbolo)
+                            // Color más claro para el agua normal, grisáceo si ha habido un impacto/fallo
+                            val colorCasilla = if (esAgua) Color(0xFF0288D1) else Color(0xFFB3E5FC)
+
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f) // Se reparten el espacio
+                                    .aspectRatio(1f) // Casillas perfectamente cuadradas
+                                    .padding(1.dp) // Pequeña separación (líneas de cuadrícula)
+                                    .background(colorCasilla, shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp))
+                                    .clickable(enabled = !motorJuego.juegoTerminado) {
+                                        motorJuego.turno(f, c)
+                                        refrescar++
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                // Quitamos el emoji redundante de agua y hacemos los demás iconos más grandes
+                                if (!esAgua) {
+                                    Text(simbolo, fontSize = 24.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (motorJuego.juegoTerminado) {
+                Button(onClick = {
+                    motorJuego.iniciarPartida()
+                    refrescar++
+                }) {
+                    Text("Jugar otra vez")
+                }
+            }
+        }
+        Text(text = "", modifier = Modifier.size(if(refrescar > 0) 0.dp else 0.dp))
     }
 }
 
 @Composable
 fun PantallaInvasores(volverAlMenu: () -> Unit) {
+    val motorJuego = remember { JuegoInvasores() }
+    var refrescar by remember { mutableStateOf(0) }
+    var juegoEnMarcha by remember { mutableStateOf(false) }
+
+    LaunchedEffect(juegoEnMarcha) {
+        while (juegoEnMarcha) {
+            // Ahora cogemos la constante a través de la clase (Companion Object)
+            delay(JuegoInvasores.INTERVALO_MOVIMIENTO)
+            motorJuego.turno("TICK")
+            refrescar++
+            if (motorJuego.vidas <= 0) {
+                juegoEnMarcha = false
+            }
+        }
+    }
+
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -231,6 +320,71 @@ fun PantallaInvasores(volverAlMenu: () -> Unit) {
         }
 
         Text("INVASORES DEL ESPACIO", fontSize = 24.sp, modifier = Modifier.padding(bottom = 16.dp))
+
+        Text(text = "PUNTOS ${motorJuego.puntos} | VIDAS ${motorJuego.vidas} | OLEADA: ${motorJuego.numeroOleada}", fontSize = 16.sp)
+        Text(text = "BOMBAS DISPONIBLES: ${motorJuego.bombasMasivas}", fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Box (
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.Black, shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text (
+                text = motorJuego.obtenerMapaComoTexto(),
+                fontFamily = FontFamily.Monospace,
+                fontSize = 24.sp,
+                lineHeight = 24.sp
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(text = motorJuego.mensaje, color = MaterialTheme.colorScheme.error, fontSize = 16.sp)
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(15.dp)) {
+            Button(onClick = {
+                motorJuego.turno("IZQUIERDA")
+                refrescar++
+            }) { Text("👈")}
+            Button(onClick = {
+                motorJuego.turno("FUEGO")
+                refrescar++
+            }) { Text("♦️")}
+            Button(onClick = {
+                motorJuego.turno("DERECHA")
+                refrescar++
+            }) { Text("👉")}
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(15.dp)) {
+            Button(
+                onClick = {
+                    if (motorJuego.vidas <= 0) {
+                        motorJuego.reiniciar()
+                        refrescar++
+                    }
+                    juegoEnMarcha = true
+                },
+                enabled = !juegoEnMarcha || motorJuego.vidas <= 0
+            ) { Text("▶️")}
+
+            Button(
+                onClick = { juegoEnMarcha = false },
+                enabled = juegoEnMarcha
+            ) { Text("⏸️")}
+
+            Button(onClick = {
+                motorJuego.turno("BOMBA")
+                refrescar++
+            }) { Text("🧨")}
+        }
+        Text(text = "", modifier = Modifier.size(if(refrescar > 0) 0.dp else 0.dp))
     }
 }
 
