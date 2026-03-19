@@ -42,9 +42,173 @@ class MotorArcade {
         var emoji: String,
         var tiempoExplotado: Long = 0L, // Cuándo lo tocamos (para la animación de explosión)
         var explotado: Boolean = false  // ¿Sigue jugando o ya lo pinchamos?
-    )
+    ) {
+        fun fueTocado(xDelDedo: Float, yDelDedo: Float): Boolean {
+            val distX = xDelDedo - x; val distY = yDelDedo - y
+            return (distX * distX) + (distY * distY) <= (radio * radio * 3f)
+        }
+    }
+
+    companion object {
+        const val MAX_MOCHIS = 1000
+    }
+
+    var puntuacion: Int = 0
+    private val gravedad = 0.01f
+    var mochis = mutableStateListOf<Mochi>()
+    val emojisDisponibles = listOf("🎈", "🫧", "🌸", "🦋")
+
+    fun tocar(xToque: Float, yToque: Float) {
+        for (mochi in mochis.reversed()) {
+            if (mochi.fueTocado(xToque, yToque) && !mochi.explotado) {
+                mochi.explotado = true // Lo marcamos como muerto
+                mochi.tiempoExplotado = System.currentTimeMillis() // Guardamos la hora del "asesinato"
+                puntuacion++ // Sumamos un punto al marcador global
+                break
+            }
+        }
+    }
+
+    fun actualizarFisicas(anchoPantalla: Float, altoPantalla: Float) {
+        if (anchoPantalla == 0f || altoPantalla == 0f) return
+
+        for (mochi in mochis) {
+            // Solo le aplicamos matemáticas de flotación a los globos vivos.
+            // Los explotados se quedan clavados en su sitio haciendo la animación de estrellas.
+            if (!mochi.explotado) {
+                mochi.velocidadY += gravedad
+                mochi.y -= mochi.velocidadY // ¡Restamos Y! En pantallas, la Y = 0 está arriba del todo, restar significa subir.
+            }
+        }
+
+        mochis.removeAll { it.y <= -250f }
+
+        if (Random.nextFloat() < 0.05) {
+            mochis.add(Mochi(
+                x = Random.nextFloat() * anchoPantalla, // Posición horizontal en cualquier punto
+                y = altoPantalla + 150f, // Nace enterrado debajo del suelo para que entre en escena naturalmente
+                velocidadX = (Random.nextFloat() * 2f) - 1f,
+                emoji = emojisDisponibles.random()
+            ))
+            if (mochis.size > MAX_MOCHIS) mochis.removeFirstOrNull()
+        }
+    }
+
+    fun limpiarPantalla() {
+        mochis.clear()
+        puntuacion = 0 // Al reiniciar, también ponemos los puntos a cero
+    }
 }
 
 @Composable
 fun PantallaArcade(alVolver: () -> Unit) {
+    val motor = remember { MotorArcade() }
+    var tamanyoPantalla by remember { mutableStateOf(IntSize.Zero) }
+    var contadorFotogramas by remember { mutableStateOf(0) }
+    var mostrarDialogo by remember { mutableStateOf(false) }
+    val medidorDeTexto = rememberTextMeasurer()
+
+    val animacion = rememberInfiniteTransition()
+    val faseOla by animacion.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(3000, easing = LinearEasing), RepeatMode.Reverse)
+    )
+    val fondo = Brush.verticalGradient(listOf(
+        androidx.compose.ui.graphics.lerp(Color(0xFFFCE4EC), Color(0xFFF06292), faseOla), // Tonos rosas atardecer
+        androidx.compose.ui.graphics.lerp(Color(0xFFF06292), Color(0xFFFCE4EC), faseOla)
+    ))
+
+    LaunchedEffect(Unit) {
+        while(true) {
+            withFrameNanos {
+                if (tamanyoPantalla != IntSize.Zero) {
+                    motor.actualizarFisicas(tamanyoPantalla.width.toFloat(), tamanyoPantalla.height.toFloat())
+                    contadorFotogramas++
+                }
+            }
+        }
+    }
+
+    if (mostrarDialogo) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogo = false },
+            title = { Text("¿Reiniciar puntuación y limpiar?") },
+            confirmButton = { TextButton(onClick = { motor.limpiarPantalla(); mostrarDialogo = false }) { Text("Sí", color = Color.Red) } },
+            dismissButton = { TextButton(onClick = { mostrarDialogo = false }) { Text("Cancelar") } }
+        )
+    }
+
+    Column(modifier = Modifier.fillMaxSize().background(fondo)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 32.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = alVolver) { Text("⬅️", fontSize = 30.sp) }
+
+            // Texto dinámico: Puntuación actual del jugador
+            Text(
+                "Puntos: ${motor.puntuacion}",
+                fontWeight = FontWeight.Bold,
+                fontSize = 24.sp,
+                color = Color.Blue
+            )
+
+            IconButton(onClick = { mostrarDialogo = true }) {
+                Text(
+                    "🧹",
+                    fontSize = 30.sp
+                )
+            } // Icono de resetear
+        }
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            Canvas(
+                modifier = Modifier.fillMaxSize()
+                    .onSizeChanged { tamanyoPantalla = it }
+                    .pointerInput(Unit) { detectTapGestures { toque -> motor.tocar(toque.x, toque.y) } }
+            ) {
+                val tiempoActual = System.currentTimeMillis()
+                val frameActual = contadorFotogramas
+
+                for (mochi in motor.mochis) {
+
+                    // LÓGICA DE DIBUJO CONDICIONAL:
+                    // El Canvas pinta de una forma si está vivo, y de OTRA muy distinta si ha explotado.
+                    if (mochi.explotado && mochi.y > 0) {
+
+                        // Estado: MUERTO (Dibujamos Animación de Explosión)
+                        val milisegundosExplotado = tiempoActual - mochi.tiempoExplotado
+
+                        // En 250ms hace un "Pop". Va de 0 al tamaño de 1.25x
+                        val factorTamanyo = (milisegundosExplotado / 250f).coerceIn(0f, 1.25f)
+
+                        val estiloTexto = TextStyle(fontSize = mochi.radio.sp * factorTamanyo)
+                        // SUSTITUCIÓN VISUAL: No dibujamos el globo, dibujamos chispas mágicas
+                        val medidas = medidorDeTexto.measure("✨", style = estiloTexto)
+
+                        drawText(
+                            textLayoutResult = medidas,
+                            topLeft = Offset(x = mochi.x - (medidas.size.width / 2f), y = mochi.y - (medidas.size.height / 2f))
+                        )
+
+                        // Cuando acaba la animación mágica visual (supera 1.25f), teletransportamos las chispas
+                        // arriba del todo (-250f). ¿Recuerdas la "Recolección de Basura" en el motor?
+                        // El motor detectará que está en -250f y lo borrará definitivamente de la memoria por nosotros.
+                        if (factorTamanyo >= 1.25f) mochi.y = -250f
+
+                    } else {
+                        // Estado: VIVO (Dibujamos el globo flotando normalmente)
+                        val estiloTexto = TextStyle(fontSize = mochi.radio.sp )
+                        val medidas = medidorDeTexto.measure(mochi.emoji, style = estiloTexto)
+
+                        drawText(
+                            textLayoutResult = medidas,
+                            topLeft = Offset(x = mochi.x - (medidas.size.width / 2f), y = mochi.y - (medidas.size.height / 2f))
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
