@@ -458,6 +458,17 @@ fun PantallaInvasores(volverAlMenu: () -> Unit) {
  */
 @Composable
 fun PantallaDamas(volverAlMenu: () -> Unit) {
+    val motorJuego = remember { JuegoDamas() }
+    var refrescar by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(motorJuego.turnoActual) {
+        if (motorJuego.turnoActual == JuegoDamas.Jugador.NEGRO && !motorJuego.juegoTerminado) {
+            delay(500)
+            motorJuego.jugarOrdenador()
+            refrescar++
+        }
+    }
+
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -471,5 +482,58 @@ fun PantallaDamas(volverAlMenu: () -> Unit) {
         }
 
         Text("DAMAS", fontSize = 24.sp, modifier = Modifier.padding(bottom = 16.dp))
+        Text(motorJuego.mensaje, fontSize = 20.sp, color = MaterialTheme.colorScheme.primary)
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF4E342E), shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                .padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            for (fila in 0 until JuegoDamas.DIMENSION) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    for (columna in 0 until JuegoDamas.DIMENSION) {
+                        val pieza = motorJuego.tablero[fila][columna]
+                        val fondoCasilla = when {
+                            fila == motorJuego.filaSeleccionada && columna == motorJuego.columnaSeleccionada -> Color(
+                                0xFF81C784
+                            ) // Verde si está seleccionada
+                            (fila + columna) % 2 == 0 -> Color(0xFFFFCC80) // Madera clara
+                            else -> Color(0xFF8D6E63) // Madera oscura
+                        }
+                        Box(
+                            modifier = Modifier
+                                .weight(1f) // Se estira para ocupar el ancho
+                                .aspectRatio(1f) // Casillas perfectamente cuadradas
+                                .background(fondoCasilla)
+                                .clickable(
+                                    enabled = !motorJuego.juegoTerminado && motorJuego.turnoActual == JuegoDamas.Jugador.BLANCO
+                                ) {
+                                    motorJuego.turno(fila, columna)
+                                    refrescar++
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(pieza.simbolo, fontSize = 24.sp)
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        if (motorJuego.juegoTerminado) {
+            Button(onClick = {
+                motorJuego.iniciarPartida()
+                refrescar++
+            }) {
+                Text("Jugar otra vez")
+            }
+        }
+        Text(text = "", modifier = Modifier.size(if (refrescar > 0) 0.dp else 0.dp))
     }
 }
