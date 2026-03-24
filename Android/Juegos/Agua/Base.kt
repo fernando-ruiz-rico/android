@@ -22,6 +22,7 @@
  * el evento `onTouchEvent` para permitir pulsar los dos chorros a la vez.
  * 5. Manipulación de Color Dinámica: Algoritmo HSV para oscurecer el color del botón al
  * pulsarlo fotograma a fotograma, logrando retroalimentación visual.
+ * 6. Integración de Audio (NUEVO): Uso de `MediaPlayer` para BGM y `SoundPool` para SFX sin latencia.
  * =========================================================================================
  */
 package com.example.myapplication
@@ -31,6 +32,9 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import android.media.AudioAttributes
+import android.media.MediaPlayer
+import android.media.SoundPool
 import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -68,7 +72,7 @@ data class ObjetoFlotante(
  */
 abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHolder.Callback, Runnable {
 
-    /** 
+    /**
      * Colección en la que cada minijuego hijo guardará sus piezas instanciadas.
      * Su ámbito `protected` asegura que solo este motor y sus minijuegos derivados pueden leer o tocar esto.
      */
@@ -129,12 +133,44 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
     /** El subproceso obrero (worker thread) encargado de la carga bruta gráfica continua del Game Loop. */
     private var hiloJuego: Thread? = null
 
+    // ================================= MOTORES DE AUDIO =================================
+    /** Reproductor para la música de fondo (BGM). Ideal para audios largos. */
+    private var reproductorMusica: MediaPlayer? = null
+
+    /** Piscina de sonidos (SFX) para efectos instantáneos como las burbujas o botones. */
+    private var motorEfectos: SoundPool? = null
+
+    /** ID numérico asignado por Android al sonido del botón una vez cargado en RAM. */
+    private var idSonidoBurbuja: Int = 0
+
+    /** Variable que define qué canción sonará. Por defecto es 0 (sin música), cada minijuego la configurará. */
+    protected var idMusicaFondo: Int = 0
+    // ====================================================================================
+
     init {
         // Vinculación obligatoria. Instruimos a la superficie gráfica que esta misma clase se hará cargo de eventos vitales.
         holder.addCallback(this)
+
+        // === CONFIGURACIÓN DE SOUNDPOOL PARA LOS BOTONES ===
+        val atributosAudio = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_GAME)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+
+        motorEfectos = SoundPool.Builder()
+            .setMaxStreams(5) // Permite reproducir hasta 5 sonidos simultáneos si pulsas rápido
+            .setAudioAttributes(atributosAudio)
+            .build()
+
+        // Cargamos el efecto de sonido en memoria (espera encontrar res/raw/sonido_boton.mp3)
+        try {
+            idSonidoBurbuja = motorEfectos?.load(context, R.raw.sonido_boton, 1) ?: 0
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
-    /** 
+    /**
      * MÉTODO OBLIGATORIO. El hijo (minijuego) lo sobrescribirá para declarar sus canastas y crear sus objetos.
      * @param ancho Ancho real medido de la pantalla.
      * @param alto Alto real medido de la pantalla.
@@ -159,6 +195,19 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
     override fun surfaceCreated(holder: SurfaceHolder) {
         inicializarNivel(width, height)
         jugando = true
+
+        // === INICIAR LA MÚSICA DE FONDO DINÁMICA ===
+        if (idMusicaFondo != 0) {
+            try {
+                reproductorMusica = MediaPlayer.create(context, idMusicaFondo)
+                reproductorMusica?.isLooping = true // Que se repita infinitamente
+                reproductorMusica?.setVolume(0.9f, 0.9f) // Volumen un poco más bajo
+                reproductorMusica?.start()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
         hiloJuego = Thread(this) // Se le asigna explícitamente el contexto de ejecución.
         hiloJuego?.start()
     }
@@ -172,10 +221,25 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
     override fun surfaceDestroyed(holder: SurfaceHolder) {
         jugando = false
         hiloJuego?.join() // Función de acoplamiento ordenado, previene cierres forzosos abruptos (crashes).
+
+        // === LIBERAR MEMORIA DE LA MÚSICA ===
+        reproductorMusica?.stop()
+        reproductorMusica?.release()
+        reproductorMusica = null
     }
 
     /** Método complementario exigido por la interfaz `Callback`. Sin uso funcional en nuestro contexto específico. */
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
+
+    /**
+     * Cuando la vista gráfica es destruida por completo,
+     * aprovechamos para liberar los efectos de sonido de la memoria RAM.
+     */
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        motorEfectos?.release()
+        motorEfectos = null
+    }
 
     /**
      * LA ARQUITECTURA CRÍTICA: EL GAME LOOP CONTINUO.
@@ -358,6 +422,19 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
     override fun onTouchEvent(event: MotionEvent): Boolean {
         var pulsandoIzq = false
         var pulsandoDer = false
+
+        // === DETECCIÓN DEL SONIDO AL TOCAR ===
+        // actionMasked nos ayuda a detectar si es el inicio de un toque nuevo
+        val accion = event.actionMasked
+        if (accion == MotionEvent.ACTION_DOWN || accion == MotionEvent.ACTION_POINTER_DOWN) {
+            val indice = event.actionIndex
+            val toqueY = event.getY(indice)
+
+            // Si el toque ocurrió en el chasis inferior (zona de botones/chorros)
+            if (toqueY > height * 0.8f) {
+                motorEfectos?.play(idSonidoBurbuja, 0.8f, 0.8f, 0, 0, 1f)
+            }
+        }
 
         // Repasamos el mapeo de todas las coordenadas concurrentes en la pantalla usando un bucle vitalicio.
         for (i in 0 until event.pointerCount) {

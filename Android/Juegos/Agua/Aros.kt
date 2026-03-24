@@ -36,8 +36,7 @@ import android.graphics.Paint
  */
 class JuegoArosView(context: Context) : JuegoAguaBase(context) {
 
-    /** 
-     * Pincel configurado en modo `STROKE` (Solo contorno).
+    /** * Pincel configurado en modo `STROKE` (Solo contorno).
      * En lugar de rellenar el círculo con color, dibuja un "Donut" matemático.
      */
     private val paintAro = Paint().apply {
@@ -72,6 +71,9 @@ class JuegoArosView(context: Context) : JuegoAguaBase(context) {
     init {
         // Redefinimos el color base del juguete heredado de la clase madre Base.kt a Verde.
         paintBase.color = Color.parseColor("#4CAF50")
+
+        // Nombre del archivo a reproducir como música de fondo
+        idMusicaFondo = R.raw.musica_aros
     }
 
     /**

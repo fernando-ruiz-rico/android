@@ -47,8 +47,7 @@ class JuegoBaloncestoView(context: Context) : JuegoAguaBase(context) {
         strokeWidth = 15f
     }
 
-    /** 
-     * Pincel en modo punteado que simula hilos en red. El parámetro fundamental es el `DashPathEffect`.
+    /** * Pincel en modo punteado que simula hilos en red. El parámetro fundamental es el `DashPathEffect`.
      * Alterna tramos de 10 píxeles encendidos de tinta, seguidos por huecos abstractos limpios de 10 píxeles nulos.
      */
     private val paintRed = Paint().apply {
@@ -86,6 +85,9 @@ class JuegoBaloncestoView(context: Context) : JuegoAguaBase(context) {
         // Transformamos su presentación por defecto en matices verdes llamativos y armónicos.
         colorBotonIzquierdoNormal = Color.parseColor("#4CAF50")
         colorBotonDerechoNormal = Color.parseColor("#4CAF50")
+
+        // Nombre del archivo a reproducir como música de fondo
+        idMusicaFondo = R.raw.musica_baloncesto
     }
 
     /**

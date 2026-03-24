@@ -65,6 +65,9 @@ class JuegoPacmanView(context: Context) : JuegoAguaBase(context) {
     init {
         // Redefinimos un tono inferior que haga armonía naturalista (Verde clorofila).
         paintBase.color = Color.parseColor("#4CAF50")
+
+        // Nombre del archivo a reproducir como música de fondo
+        idMusicaFondo = R.raw.musica_pacman
     }
 
     /**
