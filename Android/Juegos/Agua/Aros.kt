@@ -36,7 +36,8 @@ import android.graphics.Paint
  */
 class JuegoArosView(context: Context) : JuegoAguaBase(context) {
 
-    /** * Pincel configurado en modo `STROKE` (Solo contorno).
+    /** 
+     * Pincel configurado en modo `STROKE` (Solo contorno).
      * En lugar de rellenar el círculo con color, dibuja un "Donut" matemático.
      */
     private val paintAro = Paint().apply {

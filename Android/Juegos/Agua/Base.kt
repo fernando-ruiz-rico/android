@@ -68,7 +68,8 @@ data class ObjetoFlotante(
  */
 abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHolder.Callback, Runnable {
 
-    /** * Colección en la que cada minijuego hijo guardará sus piezas instanciadas.
+    /** 
+     * Colección en la que cada minijuego hijo guardará sus piezas instanciadas.
      * Su ámbito `protected` asegura que solo este motor y sus minijuegos derivados pueden leer o tocar esto.
      */
     protected val objetosFlotantes = mutableListOf<ObjetoFlotante>()
@@ -118,7 +119,8 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
     /** Registro booleano en memoria temporal sobre el estado físico del dedo en el cuadrante de botón derecho. */
     private var botonDerPulsado = false
 
-    /** * `Volatile` comunica a la máquina virtual (JVM) que esta variable debe guardarse en
+    /**
+     * `Volatile` comunica a la máquina virtual (JVM) que esta variable debe guardarse en
      * la memoria RAM principal, de modo que cualquier alteración se registre instantáneamente
      * impidiendo choques o parálisis entre los hilos de trabajo.
      */
@@ -132,7 +134,8 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
         holder.addCallback(this)
     }
 
-    /** * MÉTODO OBLIGATORIO. El hijo (minijuego) lo sobrescribirá para declarar sus canastas y crear sus objetos.
+    /** 
+     * MÉTODO OBLIGATORIO. El hijo (minijuego) lo sobrescribirá para declarar sus canastas y crear sus objetos.
      * @param ancho Ancho real medido de la pantalla.
      * @param alto Alto real medido de la pantalla.
      */

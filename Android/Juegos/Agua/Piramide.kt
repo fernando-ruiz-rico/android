@@ -50,7 +50,8 @@ class JuegoPiramideTriangulosView(context: Context) : JuegoAguaBase(context) {
         strokeCap = Paint.Cap.ROUND // Los finales cortantes abruptos quedan sellados mediante cilindros redondeados orgánicos.
     }
 
-    /** * VECTOR ESTATAL ÓPTIMO DE HARDWARE. Al instanciarlo fuera del Loop de fotogramas,
+    /** 
+     * VECTOR ESTATAL ÓPTIMO DE HARDWARE. Al instanciarlo fuera del Loop de fotogramas,
      * mitigamos miles de accesos de recolección de memoria residual por el recolector de basura JVM,
      * consiguiendo unos 60FPS intachables.
      */

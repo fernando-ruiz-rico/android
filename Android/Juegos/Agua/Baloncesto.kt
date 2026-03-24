@@ -47,7 +47,8 @@ class JuegoBaloncestoView(context: Context) : JuegoAguaBase(context) {
         strokeWidth = 15f
     }
 
-    /** * Pincel en modo punteado que simula hilos en red. El parámetro fundamental es el `DashPathEffect`.
+    /** 
+     * Pincel en modo punteado que simula hilos en red. El parámetro fundamental es el `DashPathEffect`.
      * Alterna tramos de 10 píxeles encendidos de tinta, seguidos por huecos abstractos limpios de 10 píxeles nulos.
      */
     private val paintRed = Paint().apply {
