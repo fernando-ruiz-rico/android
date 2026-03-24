@@ -1,236 +1,212 @@
+/**
+ * =========================================================================================
+ * ARCHIVO: Aros.kt
+ * =========================================================================================
+ * PROPÓSITO:
+ * Implementar el clásico minijuego de ensartar aros de plástico en postes verticales.
+ *
+ * QUÉ HACE EL CÓDIGO:
+ * Define un escenario con tres postes amarillos y genera aros de colores que flotan y caen.
+ * Contiene el algoritmo matemático para detectar cuándo el centro de un aro pasa por
+ * la punta superior de un poste. Si esto sucede, el aro queda atrapado, pierde su inercia
+ * horizontal y se desliza hacia abajo hasta amontonarse físicamente en la base.
+ *
+ * LO QUE SE APRENDE EN ESTE FICHERO:
+ * 1. Simulación de Perspectiva Falsa (2.5D): Usando `drawOval` logramos que un círculo
+ * perfecto parezca un aro acostado en profundidad una vez se encaja en el poste.
+ * 2. Cajas de Colisión (AABB): Calculamos si el centro de un aro cruza el ancho estricto
+ * de la cabeza de nuestro poste amarillo.
+ * 3. Lógica de Apilamiento Espacial: Algoritmo para contar cuántos elementos hay
+ * atrapados en una columna y fijar dinámicamente la altura final de caída
+ * para que los elementos reposen unos encima de otros físicamente hasta llegar al verde.
+ * =========================================================================================
+ */
 package com.example.myapplication
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import kotlin.math.abs
-import kotlin.random.Random
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
 
-data class Anilla(
-    var x: Float,
-    var y: Float,
-    var vx: Float = 0f, // Velocidad horizontal
-    var vy: Float = 0f, // Velocidad vertical
-    val radio: Float = 30f,
-    val color: Color
-)
+/**
+ * Clase que representa el minijuego de ensartar aros.
+ * Hereda de [JuegoAguaBase] para utilizar su motor físico de fluidos y gestión táctil.
+ *
+ * @param context El contexto de la aplicación Android, necesario para poder dibujar en pantalla.
+ */
+class JuegoArosView(context: Context) : JuegoAguaBase(context) {
 
-class MotorAcuatico {
-    val anillas = mutableListOf<Anilla>()
+    /** * Pincel configurado en modo `STROKE` (Solo contorno).
+     * En lugar de rellenar el círculo con color, dibuja un "Donut" matemático.
+     */
+    private val paintAro = Paint().apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 15f
+    }
 
-    var anchoPantalla = 0f
-    var altoPantalla = 0f
-    private var estaInicializado = false
+    /** Pincel para pintar las bases sólidas y los palos amarillos de la máquina. */
+    private val paintPoste = Paint().apply { color = Color.parseColor("#FFEB3B") }
 
-    var frame by mutableIntStateOf(0)
-        private set
+    /** Coordenada horizontal (X) donde se plantará el poste izquierdo. */
+    private var posteIzqX = 0f
+    /** Coordenada horizontal (X) donde se plantará el poste central. */
+    private var posteCentroX = 0f
+    /** Coordenada horizontal (X) donde se plantará el poste derecho. */
+    private var posteDerX = 0f
+    /** Medida vertical (Y) que indica la longitud visible del poste. */
+    private var altoPoste = 0f
+    /** Coordenada vertical (Y) donde está la "punta" más alta de los postes para detectar entradas. */
+    private var techoPosteY = 0f
 
-    private val GRAVEDAD_AGUA = 0.2f // Cae despacio
-    private val RESISTENCIA_AGUA = 0.97f // Frena el movimiento constantemente
-    private val FUERZA_CHORRO = -15f // Fuerza hacia arriba al pulsar botón
+    /** Lista de 18 colores hexadecimales variados para que los aros sean fácilmente distinguibles al amontonarse. */
+    private val coloresAros = listOf(
+        Color.parseColor("#FF0000"), Color.parseColor("#FF5252"), Color.parseColor("#FF4081"),
+        Color.parseColor("#E040FB"), Color.parseColor("#AA00FF"), Color.parseColor("#651FFF"),
+        Color.parseColor("#3D5AFE"), Color.parseColor("#2979FF"), Color.parseColor("#00B0FF"),
+        Color.parseColor("#00E5FF"), Color.parseColor("#1DE9B6"), Color.parseColor("#00E676"),
+        Color.parseColor("#76FF03"), Color.parseColor("#C6FF00"), Color.parseColor("#FFEA00"),
+        Color.parseColor("#FFC400"), Color.parseColor("#FF9100"), Color.parseColor("#FF3D00")
+    )
 
-    fun inicializarJuego(size: IntSize) {
-        if (estaInicializado) return
-        anchoPantalla = size.width.toFloat()
-        altoPantalla = size.height.toFloat()
+    init {
+        // Redefinimos el color base del juguete heredado de la clase madre Base.kt a Verde.
+        paintBase.color = Color.parseColor("#4CAF50")
+    }
 
-        val coloresAnillas = listOf(Color.Yellow, Color.Cyan, Color.Magenta, Color.Green, Color(0xFFFFA500))
-        for (i in 1..15) {
-            anillas.add(
-                Anilla(
-                    x = Random.nextFloat() * anchoPantalla,
-                    y = altoPantalla - Random.nextFloat() * 200f, // Empiezan abajo
-                    color = coloresAnillas.random()
-                )
+    /**
+     * Se llama cuando la pantalla del dispositivo ya tiene sus medidas finales.
+     * Calcula las posiciones exactas de los elementos en base a dichas medidas.
+     *
+     * @param ancho Anchura disponible en píxeles.
+     * @param alto Altura disponible en píxeles.
+     */
+    override fun inicializarNivel(ancho: Int, alto: Int) {
+        // Generamos un diseño que se adapte proporcionalmente a cualquier pantalla de móvil
+        posteIzqX = ancho * 0.20f
+        posteCentroX = ancho * 0.5f
+        posteDerX = ancho * 0.80f
+
+        altoPoste = alto * 0.35f
+        techoPosteY = (alto * 0.8f) - altoPoste
+
+        objetosFlotantes.clear()
+        puntuacion = 0
+
+        // Queremos llenar la pantalla inicial con 18 aros
+        for (i in 0 until 18) {
+            generarNuevoObjeto()
+        }
+    }
+
+    /**
+     * Crea una nueva pieza flotante (Aro) en una posición semi-aleatoria de la pantalla
+     * y la añade a la lista principal de objetos que manejan las físicas.
+     */
+    override fun generarNuevoObjeto() {
+        val posX = (Math.random() * (width - 100) + 50).toFloat()
+        val posY = (Math.random() * (height * 0.3f) + height * 0.5f).toFloat()
+
+        objetosFlotantes.add(
+            ObjetoFlotante(
+                x = posX,
+                y = posY,
+                radio = 55f,
+                color = coloresAros.random()
             )
-        }
-        estaInicializado = true
+        )
     }
 
-    fun activarChorroIzquierdo() {
-        aplicarFuerzaChorro(vxChorro = 8f) // Un empuje un poco más fuerte hacia los lados
-    }
+    /**
+     * Bucle visual. Pinta las piezas estáticas (postes) y luego itera sobre
+     * cada aro flotante para dibujarlo.
+     *
+     * @param canvas El lienzo proporcionado por Android para dibujar gráficos.
+     */
+    override fun dibujarJuego(canvas: Canvas) {
+        // Postes amarillos dibujados en el fondo (10 píxeles a cada lado de su centro lógico)
+        canvas.drawRect(posteIzqX - 10f, techoPosteY, posteIzqX + 10f, height * 0.8f, paintPoste)
+        canvas.drawRect(posteCentroX - 10f, techoPosteY, posteCentroX + 10f, height * 0.8f, paintPoste)
+        canvas.drawRect(posteDerX - 10f, techoPosteY, posteDerX + 10f, height * 0.8f, paintPoste)
 
-    fun activarChorroDerecho() {
-        aplicarFuerzaChorro(vxChorro = -8f)
-    }
+        for (p in objetosFlotantes) {
+            paintAro.color = p.color
 
-    /** Aplica fuerza a las anillas, sobre todo a las que están más abajo */
-    private fun aplicarFuerzaChorro(vxChorro: Float) {
-        anillas.forEach { anilla ->
-            // El chorro afecta más si la anilla está en la mitad inferior de la pantalla
-            if (anilla.y > altoPantalla * 0.4f) {
-                // Añadimos velocidad hacia arriba (negativa en Y)
-                anilla.vy += FUERZA_CHORRO * (Random.nextFloat() * 0.5f + 0.8f) // Pequeña variación aleatoria
-                // Añadimos un poco de velocidad lateral
-                anilla.vx += vxChorro * Random.nextFloat()
+            if (p.atrapado) {
+                // Alumno, fíjate aquí: Si está atrapado (ensartado), aplastamos su alto a solo 20 píxeles.
+                // Esto engaña al ojo humano haciendo que parezca que vemos el aro desde arriba en perspectiva.
+                canvas.drawOval(p.x - p.radio, p.y - 10f, p.x + p.radio, p.y + 10f, paintAro)
+            } else {
+                // Si flota libre en el agua, está de cara al usuario y lo vemos como un círculo perfecto.
+                canvas.drawCircle(p.x, p.y, p.radio, paintAro)
             }
         }
     }
 
-    fun actualizarFisicas() {
-        if (anchoPantalla == 0f) return
+    /**
+     * Algoritmo principal de este minijuego.
+     * Comprueba choques contra los postes y gestiona el amontonamiento de piezas.
+     */
+    override fun comprobarLogicaEspecifica() {
+        // Diccionario que actuará de contador para saber cuántos aros se han amontonado en cada poste.
+        val apilados = mutableMapOf<Float, Int>()
+        apilados[posteIzqX] = 0
+        apilados[posteCentroX] = 0
+        apilados[posteDerX] = 0
 
-        anillas.forEach { anilla ->
-            anilla.vy += GRAVEDAD_AGUA
+        // Ordenamos los aros desde el fondo de la pantalla hacia arriba.
+        // Es imperativo para que el algoritmo apile el de más abajo como "0", el siguiente como "1", etc.
+        val ordenados = objetosFlotantes.sortedByDescending { it.y }
 
-            anilla.vx *= RESISTENCIA_AGUA
-            anilla.vy *= RESISTENCIA_AGUA
+        for (p in ordenados) {
+            if (p.atrapado) {
+                p.vx = 0f // Inmovilizado lateralmente, solo puede caer hacia abajo
 
-            anilla.x += anilla.vx
-            anilla.y += anilla.vy
+                // Leemos cuántos aros YA HAN LLEGADO antes que él al suelo de ese mismo poste.
+                val cantApilada = apilados[p.x] ?: 0
 
-            if (anilla.y + anilla.radio > altoPantalla) {
-                anilla.y = altoPantalla - anilla.radio
-                anilla.vy = -abs(anilla.vy) * 0.3f // Rebote con mucha pérdida de energía
-            }
-            if (anilla.y - anilla.radio < 0) {
-                anilla.y = anilla.radio
-                anilla.vy = abs(anilla.vy) * 0.3f
-            }
+                // Calculamos el suelo: Base verde general (height * 0.8f)
+                // menos el grosor de los aros que ya haya apilados debajo (20f por cada uno).
+                val sueloObjetivo = (height * 0.8f) - 10f - (cantApilada * 20f)
 
-            if (anilla.x + anilla.radio > anchoPantalla || anilla.x - anilla.radio < 0) {
-                anilla.vx *= -0.5f // Invertir dirección y perder energía
-                anilla.x = anilla.x.coerceIn(anilla.radio, anchoPantalla - anilla.radio)
-            }
-        }
-        frame++
-    }
-}
+                // Si ha cruzado su objetivo calculado en la caída...
+                if (p.y >= sueloObjetivo) {
+                    p.y = sueloObjetivo // Lo fijamos rígidamente en su lugar
+                    p.vy = 0f // Matamos inercia gravitacional
+                    apilados[p.x] = cantApilada + 1 // Subimos el contador para el SIGUIENTE aro que baje por aquí.
+                } else {
+                    // Aún está cayendo, lo aceleramos levemente para que caiga liso y natural por el palo
+                    p.vy += 1f
+                    // Lo contabilizamos igualmente porque, aunque siga cayendo, reserva su espacio,
+                    // evitando que otro aro intente ocupar su misma altura física antes de llegar.
+                    apilados[p.x] = cantApilada + 1
+                }
 
-// --- UI COMPOSABLE ---
-
-@Composable
-fun PantallaAros(onVolver: () -> Unit) {
-    val motor = remember { MotorAcuatico() }
-
-    // Bucle de juego correcto sincronizado con los FPS de la pantalla
-    LaunchedEffect(Unit) {
-        while (true) {
-            withFrameMillis {
-                motor.actualizarFisicas()
-            }
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(Color(0xFF4FC3F7), Color(0xFF0288D1), Color(0xFF01579B))
-                )
-            )
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .statusBarsPadding() // Respeta la barra de notificaciones superior
-        ) {
-            IconButton(onClick = onVolver, modifier = Modifier.align(Alignment.CenterStart)) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = Color.White)
-            }
-            Text(
-                "Juego de Agua",
-                color = Color.White,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.Center)
-            )
-        }
-
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-
-            val frameActual = motor.frame
-
-            Canvas(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .onSizeChanged { size ->
-                        motor.inicializarJuego(size)
+            } else {
+                // LÓGICA DE DETECCIÓN Y ENSARTADO INICIAL
+                // El aro cae por el agua, debe ir hacia abajo (vy > 0) y su zona central cruzar la punta.
+                if (p.vy > 0 && p.y + p.radio > techoPosteY - 15f && p.y < techoPosteY + 55f) {
+                    // Comprobamos si su X se alinea con uno de los postes con margen de error del 80% de su radio.
+                    if (Math.abs(p.x - posteIzqX) < p.radio * 0.8f) {
+                        p.x = posteIzqX; p.atrapado = true
+                    } else if (Math.abs(p.x - posteCentroX) < p.radio * 0.8f) {
+                        p.x = posteCentroX; p.atrapado = true
+                    } else if (Math.abs(p.x - posteDerX) < p.radio * 0.8f) {
+                        p.x = posteDerX; p.atrapado = true
                     }
-            ) {
-                val f = frameActual
-
-                // 2. Dibujar Anillas
-                motor.anillas.forEach { anilla ->
-                    // Dibujamos un círculo hueco (Stroke)
-                    drawCircle(
-                        color = anilla.color,
-                        radius = anilla.radio,
-                        center = Offset(anilla.x, anilla.y),
-                        style = Stroke(width = 8f) // Grosor de la anilla
-                    )
-                    // Un pequeño brillo blanco para efecto de plástico
-                    drawCircle(
-                        color = Color.White.copy(alpha = 0.5f),
-                        radius = anilla.radio - 4f,
-                        center = Offset(anilla.x - 5f, anilla.y - 5f),
-                        style = Stroke(width = 3f)
-                    )
+                } else if (p.y > techoPosteY) {
+                    // REBOTE: Si no tuvo suerte de ensartarse, choca contra las paredes de los palos
+                    if (Math.abs(p.x - posteIzqX) < p.radio) {
+                        p.x = if (p.x < posteIzqX) posteIzqX - p.radio else posteIzqX + p.radio
+                        p.vx *= -0.5f
+                    } else if (Math.abs(p.x - posteCentroX) < p.radio) {
+                        p.x = if (p.x < posteCentroX) posteCentroX - p.radio else posteCentroX + p.radio
+                        p.vx *= -0.5f
+                    } else if (Math.abs(p.x - posteDerX) < p.radio) {
+                        p.x = if (p.x < posteDerX) posteDerX - p.radio else posteDerX + p.radio
+                        p.vx *= -0.5f
+                    }
                 }
             }
         }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp)
-                .navigationBarsPadding(), // Respeta la barra de navegación de Android
-            horizontalArrangement = Arrangement.spacedBy(16.dp) // Espaciado central
-        ) {
-            // Botón Izquierdo
-            BotonBombaAgua(
-                texto = "BOMBA IZQ.",
-                modifier = Modifier.weight(1f)
-            ) { motor.activarChorroIzquierdo() }
-
-            // Botón Derecho
-            BotonBombaAgua(
-                texto = "BOMBA DER.",
-                modifier = Modifier.weight(1f)
-            ) { motor.activarChorroDerecho() }
-        }
-    }
-}
-
-@Composable
-fun BotonBombaAgua(
-    texto: String,
-    modifier: Modifier = Modifier,
-    alPulsar: () -> Unit
-) {
-    Button(
-        onClick = alPulsar,
-        modifier = modifier.height(80.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFFFDD835), // Amarillo juguete
-            contentColor = Color.Black
-        ),
-        elevation = ButtonDefaults.buttonElevation(
-            pressedElevation = 2.dp,
-            defaultElevation = 10.dp
-        )
-    ) {
-        Text(texto, fontWeight = FontWeight.Black, fontSize = 16.sp)
     }
 }
