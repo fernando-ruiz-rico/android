@@ -76,6 +76,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun PieExample() {
+  var pieSelectedInfo by remember { mutableStateOf("") }
   var data by remember {
     mutableStateOf(
       listOf(
@@ -89,9 +90,9 @@ fun PieExample() {
     modifier = Modifier.size(300.dp),
     data = data,
     onPieClick = {
-      println("${it.label} Clicked")
       val pieIndex = data.indexOf(it)
-      data = data.mapIndexed { mapIndex, pie -> pie.copy(selected = pieIndex == mapIndex) }
+      data = data.mapIndexed { mapIndex, pie -> pie.copy(selected = pieIndex == mapIndex && !pie.selected) }
+      pieSelectedInfo = (it.label ?: "") + ":" + ("%.2f".format(it.data))
     },
     selectedScale = 1.2f,
     scaleAnimEnterSpec = spring<Float>(
@@ -103,10 +104,8 @@ fun PieExample() {
     scaleAnimExitSpec = tween(300),
     spaceDegreeAnimExitSpec = tween(300),
     style = Pie.Style.Fill,
-    labelHelperProperties = LabelHelperProperties(
-      enabled = true,
-    )
   )
+  Text(pieSelectedInfo)
 }
 
 @Composable
