@@ -2,6 +2,7 @@ package com.example.ejemploproductos.db.products
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.sql.Date
 
 @Entity
 data class Product(
