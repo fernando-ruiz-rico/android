@@ -28,10 +28,12 @@
  * 6. Integración de Audio: Uso de `MediaPlayer` para BGM y `SoundPool` para SFX sin latencia.
  * 7. Sensores de Hardware (Acelerómetro): Integración con `SensorManager` para leer los
  * ejes espaciales del teléfono en tiempo real y transformarlos en vectores de fuerza.
- * 8. Dinámica de Fluidos (Avanzado): Uso de "Velocidad Terminal" y amortiguación de colisiones
- * para emular la densidad y resistencia del medio acuático.
- * 9. Optimización Extrema (Anti-Atascos): Cacheo de memoria para anular el Garbage Collector
- * y micro-turbulencias para evitar puntos muertos de inercia en móviles antiguos.
+ * 8. Dinámica de Fluidos y Efectos Visuales: Uso de "Velocidad Terminal", cámara de aire,
+ * amortiguación de colisiones, superficie del agua inclinable y oleaje interactivo.
+ * 9. Shaders y Degradados: Implementación de `LinearGradient` para dar una sensación
+ * volumétrica real al agua, oscureciendo el fondo para generar profundidad sin gastar memoria.
+ * 10. Saneamiento Post-Colisión (Resting Contact): Sistema anti-vibración que mata inercias
+ * residuales para evitar el "jittering" e impedir que los objetos queden atascados.
  * =========================================================================================
  */
 package com.example.myapplication
@@ -39,8 +41,12 @@ package com.example.myapplication
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
+import android.graphics.Shader
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -51,6 +57,9 @@ import android.media.SoundPool
 import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sin
 
 /**
  * Representa matemáticamente cualquier pieza jugable y movible (Aro, Pelota, Pez...).
@@ -99,17 +108,22 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
     // La instanciación de objetos de pintura es pesada computacionalmente. Aquí se crean
     // y afinan una sola vez al inicio en lugar de en cada uno de los 60 fotogramas por segundo.
 
-    /** Pincel estático para colorear el gran área azul simulando el compartimento estanco con agua. */
-    protected val paintAgua = Paint().apply { color = Color.parseColor("#B3E5FC") }
-    /** Pincel estático que pinta toda la sección baja (el motor y chasis) del juguete. */
-    protected val paintBase = Paint().apply { color = Color.parseColor("#4CAF50") }
+    /** Pincel para el cuerpo principal del agua estancada. Recibirá su degradado 3D en surfaceCreated(). */
+    protected val paintAgua = Paint().apply {
+        // El Dithering (Entramado) es crucial en los degradados Android para evitar el "Banding" (líneas tipo escalón).
+        // Obliga al motor gráfico a mezclar los píxeles adyacentes de forma mucho más suave.
+        isDither = true
+    }
+
+    /** Pincel estático que pinta toda la sección baja (el motor y chasis) del juguete. Color menta pastel: relajante y distintivo. */
+    protected val paintBase = Paint().apply { color = Color.parseColor("#4DB6AC") }
     /** Pincel dinámico reservado para dibujar los círculos interactivos que ejercen de pulsadores/botones. */
     protected val paintBoton = Paint()
     /** Pincel configurado a gran escala gráfica para dibujar los Emojis interpretándolos como letras de texto. */
     protected val paintTextoBoton = Paint().apply { textSize = 100f }
 
-    /** Pincel con un 70% de blancura opaca. Se usa para las cartelas del panel inferior que mejoran la lectura. */
-    private val paintFondoUI = Paint().apply { color = Color.parseColor("#B3FFFFFF") }
+    /** Pincel con un 70% de opacidad. Se usa para las cartelas del panel inferior que mejoran la lectura. Azul claro a petición. */
+    private val paintFondoUI = Paint().apply { color = Color.parseColor("#B3B3E5FC") }
 
     /** Pincel meticulosamente alineado en modo 'CENTER' para facilitar el pintado y auto-centrado del marcador de puntos. */
     protected val paintMarcador = Paint().apply {
@@ -134,17 +148,30 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
     private var colorIzqOscuro = 0
     private var colorDerOscuro = 0
 
+    // Matriz de transformación para rotar el degradado sin recrear objetos
+    private val matrixDegradado = Matrix()
+
+    // Elementos geométricos cacheados para renderizar el mar dinámico
+    private val pathCuerpoAgua = Path()
+
     // ================================= CONSTRAINTS FÍSICAS DE FLUIDOS =================================
     /** Fuerza continua aplicada que arrastra inexorablemente los cuerpos hacia abajo cada fotograma. */
     private val gravedad = 0.8f
     /** Fuerza contraria fija que imita la densidad del medio acuoso (flotar suavemente). Resultado neto: 0.3f hacia abajo */
     private val flotabilidad = -0.5f
 
-    /** VISCOSIDAD: Variable de freno multiplicativo más severo. El agua frena rápidamente los objetos (antes 0.95f, ahora 0.92f). */
+    /** VISCOSIDAD: Variable de freno multiplicativo más severo. El agua frena rápidamente los objetos. */
     private val friccionAgua = 0.92f
 
     /** VELOCIDAD TERMINAL: Por mucho que agites el móvil, el agua impide que las piezas vayan a velocidades balísticas. */
     private val velocidadMaxima = 14f
+
+    /** Nivel de altura predeterminado del agua (más lleno, dejando menos aire arriba) */
+    private val nivelAguaCentroBase = 80f
+
+    // Variables interactivas del agua visual
+    private var tiempoOlas = 0f
+    private var energiaAgua = 0f // Almacena cuánta "violencia" u oleaje hay activo
 
     /** Registro booleano en memoria temporal sobre el estado físico del dedo en el cuadrante de botón izquierdo. */
     private var botonIzqPulsado = false
@@ -234,6 +261,16 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
      * @param holder Representación interna de la pantalla.
      */
     override fun surfaceCreated(holder: SurfaceHolder) {
+
+        // === CONFIGURAR DEGRADADO DE AGUA ===
+        // Colores mucho más claros para dar una sensación de agua limpia, cristalina y luminosa.
+        paintAgua.shader = LinearGradient(
+            0f, 0f, 0f, height * 0.8f,
+            Color.parseColor("#80B3E5FC"), // Superficie: Azul casi blanco, muy transparente y luminoso
+            Color.parseColor("#E64FC3F7"), // Profundidad: Celeste brillante, alegre y relajante sin ser oscuro
+            Shader.TileMode.CLAMP
+        )
+
         inicializarNivel(width, height)
         jugando = true
 
@@ -328,8 +365,11 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
             // 2. Fase de Adquisición de Pintura. Capturamos el lienzo obligando a Android a no alterarlo.
             val canvas = holder.lockCanvas()
             if (canvas != null) {
-                // A. Renderizado Base - Acuático y Profundo.
-                canvas.drawRect(0f, 0f, width.toFloat(), height * 0.8f, paintAgua)
+                // Limpiamos el fondo con un blanco puro para que parezca un juguete muy iluminado
+                canvas.drawColor(Color.parseColor("#FFFFFF"))
+
+                // A. Renderizado Base - Agua Dinámica
+                dibujarAguaDinamica(canvas)
 
                 // B. Renderizado Detallado - Cedemos el control para que el hijo pinte el entorno y las bolas.
                 dibujarJuego(canvas)
@@ -344,6 +384,59 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
     }
 
     /**
+     * Dibuja la superficie poligonal del agua. Reacciona al acelerómetro inclinándose
+     * como agua real dentro de una pecera y genera ondas si hay energía en el tanque.
+     */
+    private fun dibujarAguaDinamica(canvas: Canvas) {
+        tiempoOlas += 0.05f + (energiaAgua * 0.005f) // El agua fluye y ondula
+        energiaAgua *= 0.96f // Fricción: La "violencia" del oleaje se calma sola progresivamente
+
+        // Calcular el desnivel de inclinación del agua
+        val diferenciaAlturaTilt = inclinacionX * -12f
+        val limiteSuelo = height * 0.8f
+
+        // ===== ROTACIÓN DEL DEGRADADO (SHADERS) =====
+        // Al rotar el dispositivo, calculamos el ángulo trigonométrico de la superficie del agua
+        // y aplicamos una transformación Matrix al shader para que la luz y sombra giren acorde al fluido.
+        val anguloRad = kotlin.math.atan2((diferenciaAlturaTilt * 2f).toDouble(), width.toDouble())
+        val anguloGrados = Math.toDegrees(anguloRad).toFloat()
+
+        matrixDegradado.reset()
+        matrixDegradado.setRotate(anguloGrados, width / 2f, nivelAguaCentroBase)
+        paintAgua.shader.setLocalMatrix(matrixDegradado)
+
+        // ===== MASA PRINCIPAL DE AGUA (SUPERFICIE INCLINADA Y DEGRADADA) =====
+        pathCuerpoAgua.reset()
+
+        var x = 0f
+        val pasoX = width / 10f // Trazamos 10 puntos a lo ancho para no matar el procesador
+        val yIzquierda = nivelAguaCentroBase - diferenciaAlturaTilt
+
+        pathCuerpoAgua.moveTo(0f, yIzquierda)
+
+        while (x <= width + pasoX) {
+            val ratio = x / width
+            val tiltLocal = -diferenciaAlturaTilt + (ratio * diferenciaAlturaTilt * 2f)
+
+            // Ondulación
+            val anguloBase = (x * 0.015f) + tiempoOlas
+            val amplitud = 5f + (energiaAgua * 0.4f)
+            val yOnda = sin(anguloBase) * amplitud
+
+            val y = nivelAguaCentroBase + tiltLocal + yOnda
+            pathCuerpoAgua.lineTo(x, y)
+            x += pasoX
+        }
+
+        // Cerrar el polígono de agua por debajo hasta el motor plástico
+        pathCuerpoAgua.lineTo(width.toFloat(), limiteSuelo)
+        pathCuerpoAgua.lineTo(0f, limiteSuelo)
+        pathCuerpoAgua.close()
+
+        canvas.drawPath(pathCuerpoAgua, paintAgua)
+    }
+
+    /**
      * Corazón central de colisiones y vectores físicos numéricos compartidos.
      * Modifica las coordenadas (`x`, `y`) basándose en una amalgama de fuerzas concurrentes.
      */
@@ -355,28 +448,53 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
         // OPTIMIZACIÓN: Cacheamos las variables matemáticas para no ejecutar multiplicaciones 60 veces por bola.
         val limiteSuelo = height * 0.8f
         val limiteParedDer = width.toFloat()
+        val diferenciaAlturaTilt = inclinacionX * -12f
 
         // OPTIMIZACIÓN GC: Usar un bucle 'for indexado' en Kotlin evita crear un objeto `Iterator` invisible en cada frame.
         for (i in 0 until objetosFlotantes.size) {
             val p = objetosFlotantes[i]
 
-            // Suma del balance de fuerzas naturales aplicadas al eje vertical.
-            p.vy += (gravedad + flotabilidad)
+            // Calculamos exactamente a qué altura matemática está el agua *debajo* de esta ficha concreta.
+            val ratioX = p.x / width
+            val tiltLocal = -diferenciaAlturaTilt + (ratioX * diferenciaAlturaTilt * 2f)
+            val nivelAguaLocal = nivelAguaCentroBase + tiltLocal
 
             // ============================================================================
-            // INYECCIÓN DE FUERZAS DEL ACELERÓMETRO
+            // DUALIDAD FÍSICA: CÁMARA DE AIRE VS LÍQUIDO SUMERGIDO
             // ============================================================================
-            if (!p.atrapado) {
-                // Se ha reducido el multiplicador de inercia (0.3f en vez de 0.4f) para simular
-                // que el agua pesa y frena los cambios bruscos de inclinación de tu mano.
-                p.vx += inclinacionX * 0.3f
-                p.vy += inclinacionY * 0.3f
+            if (p.y > nivelAguaLocal) {
+                // --> ESTÁ SUMERGIDO EN EL AGUA
+                p.vy += (gravedad + flotabilidad)
+
+                // INYECCIÓN DE FUERZAS DEL ACELERÓMETRO
+                if (!p.atrapado) {
+                    p.vx += inclinacionX * 0.3f
+                    p.vy += inclinacionY * 0.3f
+                }
+
+                // Atenuación obligatoria de inercia (Viscosidad del agua incrementada)
+                p.vx *= friccionAgua
+                p.vy *= friccionAgua
+
+            } else {
+                // --> ESTÁ VOLANDO EN LA CÁMARA DE AIRE
+                p.vy += gravedad // En el aire la gravedad empuja mucho más fuerte y hacia abajo (sin flotabilidad)
+
+                if (!p.atrapado) {
+                    p.vx += inclinacionX * 0.15f // El aire no "arrastra" tanta masa lateral como el agua
+                }
+
+                // Menos fricción: Las piezas vuelan con poca resistencia en el aire
+                p.vx *= 0.99f
+                p.vy *= 0.99f
+
+                // Efecto 'Chapuzón': Si en el frame anterior venía rapidísimo del aire y acaba de chocar
+                // con el agua, frena en seco y genera energía al agua (salpica).
+                if (p.y + p.vy > nivelAguaLocal && p.vy > 5f) {
+                    energiaAgua += p.vy * 0.5f // Generar ola por impacto
+                    p.vy *= 0.4f // Se frena brusco al entrar al agua densa
+                }
             }
-            // ============================================================================
-
-            // Atenuación obligatoria de inercia (Viscosidad del agua incrementada)
-            p.vx *= friccionAgua
-            p.vy *= friccionAgua
 
             // ============================================================================
             // RESISTENCIA DE FLUIDOS: VELOCIDAD TERMINAL
@@ -391,7 +509,7 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
             p.y += p.vy
 
             // ============================================================================
-            // REBOTES EN EL AGUA (Absorción de impactos)
+            // REBOTES (Absorción de impactos)
             // ============================================================================
             // Comprobación de Colisiones Laterales
             if (p.x - p.radio < 0) {
@@ -403,10 +521,10 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
                 p.vx *= -0.4f
             }
 
-            // Comprobación de Colisión Superior contra el "techo de cristal".
+            // Comprobación de Colisión Superior contra el techo real del móvil (el aire)
             if (p.y - p.radio < 0) {
                 p.y = p.radio
-                p.vy *= -0.3f
+                p.vy *= -0.5f // Rebota contra la pared de arriba
             }
 
             // Comprobación de Gravedad Muerta contra el plástico inferior.
@@ -414,11 +532,7 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
                 p.y = limiteSuelo - p.radio
                 p.vy *= -0.4f
 
-                // ============================================================================
                 // LÓGICA ANTI-ATASCO (Optimización para esquinas en móviles lentos)
-                // ============================================================================
-                // Si la ficha descansa en el fondo y no le queda casi velocidad, le aplicamos
-                // una micro-turbulencia aleatoria (movimiento browniano acuático) para despegarla.
                 if (Math.abs(p.vx) < 0.5f && Math.abs(p.vy) < 0.5f) {
                     p.vx += (Math.random().toFloat() - 0.5f) * 3f
                     p.vy -= Math.random().toFloat() * 2f // Leve saltito hacia arriba
@@ -428,6 +542,23 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
 
         // Momento de intercesión. Cedemos la ejecución para validar colisiones complejas con postas o cestas hijas.
         comprobarLogicaEspecifica()
+
+        // ============================================================================
+        // SANEAMIENTO POST-COLISIÓN (Filtro Anti-Vibración / Resting Contact)
+        // Resuelve el problema de las fichas atascadas intermitentemente en los aros.
+        // Si la lógica hija (ej: Baloncesto) genera un rebote vertical microscópico
+        // que solo provoca "temblores" y permite al acelerómetro contrarrestarlo,
+        // lo anulamos. Esto obliga a la ficha a "resbalar" lateralmente sin interrupción.
+        // ============================================================================
+        for (i in 0 until objetosFlotantes.size) {
+            val p = objetosFlotantes[i]
+            if (!p.atrapado) {
+                // Si el rebote hacia arriba es muy débil (menor a 2.0 de fuerza)
+                if (p.vy < 0f && p.vy > -2.0f) {
+                    p.vy = 0f // Matamos el rebote para forzar el deslizamiento
+                }
+            }
+        }
 
         var nuevosAGenerar = 0
         val tamanoActual = objetosFlotantes.size
@@ -457,6 +588,10 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
      */
     private fun aplicarChorro(xChorro: Float, yChorro: Float) {
         val radioChorro = width * 0.4f // Cacheado
+
+        // Generamos energía (olas visuales) al apretar el botón del chorro
+        energiaAgua += 3f
+        if (energiaAgua > 40f) energiaAgua = 40f // Limitamos la violencia máxima del oleaje
 
         for (i in 0 until objetosFlotantes.size) {
             val p = objetosFlotantes[i]

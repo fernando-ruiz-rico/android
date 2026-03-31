@@ -61,7 +61,7 @@ class JuegoPescarView(context: Context) : JuegoAguaBase(context) {
 
     init {
         // Redefinimos un tono inferior cristalino (Azul turquesa océano lúdico).
-        paintBase.color = Color.parseColor("#2196F3")
+        paintBase.color = Color.parseColor("#D53985")
 
         // Nombre del archivo a reproducir como música de fondo
         idMusicaFondo = R.raw.musica_pesca
