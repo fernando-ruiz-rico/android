@@ -28,6 +28,10 @@
  * 6. Integración de Audio: Uso de `MediaPlayer` para BGM y `SoundPool` para SFX sin latencia.
  * 7. Sensores de Hardware (Acelerómetro): Integración con `SensorManager` para leer los
  * ejes espaciales del teléfono en tiempo real y transformarlos en vectores de fuerza.
+ * 8. Dinámica de Fluidos (Avanzado): Uso de "Velocidad Terminal" y amortiguación de colisiones
+ * para emular la densidad y resistencia del medio acuático.
+ * 9. Optimización Extrema (Anti-Atascos): Cacheo de memoria para anular el Garbage Collector
+ * y micro-turbulencias para evitar puntos muertos de inercia en móviles antiguos.
  * =========================================================================================
  */
 package com.example.myapplication
@@ -120,13 +124,27 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
     /** Estado de color base para el botón derecho. */
     protected var colorBotonDerechoNormal: Int = Color.parseColor("#FF9800")
 
-    // ================================= CONSTRAINTS FÍSICAS =================================
+    // ================================= OPTIMIZACIONES DE MEMORIA (0 ALLOCATIONS) =================================
+    // Pre-reservamos espacios de memoria que antes se destruían y creaban 60 veces por segundo, ahogando al móvil.
+    private val rectFondoMarcador = RectF()
+    private val arrayHsvTemporal = FloatArray(3)
+    private var textoPuntuacionCache = "0"
+    private var puntuacionAnterior = -1
+    private var coloresBotonesCalculados = false
+    private var colorIzqOscuro = 0
+    private var colorDerOscuro = 0
+
+    // ================================= CONSTRAINTS FÍSICAS DE FLUIDOS =================================
     /** Fuerza continua aplicada que arrastra inexorablemente los cuerpos hacia abajo cada fotograma. */
     private val gravedad = 0.8f
-    /** Fuerza contraria fija que imita la densidad del medio acuoso (flotar suavemente). */
+    /** Fuerza contraria fija que imita la densidad del medio acuoso (flotar suavemente). Resultado neto: 0.3f hacia abajo */
     private val flotabilidad = -0.5f
-    /** Variable de freno multiplicativo. Aplicar `0.95` aniquila el 5% del movimiento previo imitando la viscosidad. */
-    private val friccionAgua = 0.95f
+
+    /** VISCOSIDAD: Variable de freno multiplicativo más severo. El agua frena rápidamente los objetos (antes 0.95f, ahora 0.92f). */
+    private val friccionAgua = 0.92f
+
+    /** VELOCIDAD TERMINAL: Por mucho que agites el móvil, el agua impide que las piezas vayan a velocidades balísticas. */
+    private val velocidadMaxima = 14f
 
     /** Registro booleano en memoria temporal sobre el estado físico del dedo en el cuadrante de botón izquierdo. */
     private var botonIzqPulsado = false
@@ -156,25 +174,17 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
     /** Variable que define qué canción sonará. Por defecto es 0 (sin música), cada minijuego la configurará. */
     protected var idMusicaFondo: Int = 0
 
-    // ================================= ACELERÓMETRO  =================================
-    /** * Puerta de enlace principal con los servicios de hardware del dispositivo. 
-     * Permite solicitar acceso a los distintos sensores físicos de la placa base. 
-     */
+    // ================================= ACELERÓMETRO =================================
+    /** Puerta de enlace principal con los servicios de hardware del dispositivo. */
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    
-    /** * Representación en código del hardware físico del sensor de aceleración.
-     * Mide la fuerza de aceleración (en m/s²) que se aplica al dispositivo en los tres ejes físicos (x, y, z).
-     */
+
+    /** Representación en código del hardware físico del sensor de aceleración. */
     private val acelerometro: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-    
-    /** * Fuerza lateral calculada generada al volcar el móvil hacia la izquierda o derecha.
-     * Transformamos este valor bruto para sumarlo directamente a la inercia (Vx) de los objetos.
-     */
+
+    /** Fuerza lateral calculada generada al volcar el móvil hacia la izquierda o derecha. */
     private var inclinacionX = 0f
-    
-    /** * Fuerza vertical calculada generada al inclinar el móvil hacia nosotros (levantarlo) o alejarlo (tumbarlo).
-     * Transformamos este valor para alterar la gravedad (Vy) que sienten los objetos.
-     */
+
+    /** Fuerza vertical calculada generada al inclinar el móvil hacia nosotros (levantarlo) o alejarlo (tumbarlo). */
     private var inclinacionY = 0f
     // ====================================================================================
 
@@ -241,8 +251,6 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
 
         // === ACTIVAR ACELERÓMETRO ===
         acelerometro?.let {
-            // Registramos esta vista del juego como oyente de las variaciones físicas.
-            // SENSOR_DELAY_GAME le indica a Android que queremos actualizaciones a gran velocidad (para juegos).
             sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
         }
 
@@ -266,8 +274,6 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
         reproductorMusica = null
 
         // === DESACTIVAR ACELERÓMETRO ===
-        // Es un mandamiento crítico de Android: Si el juego se oculta, nos desuscribimos del sensor 
-        // para no drenar la batería del usuario en segundo plano.
         sensorManager.unregisterListener(this)
     }
 
@@ -293,10 +299,10 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
     override fun onSensorChanged(event: SensorEvent?) {
         if (event?.sensor?.type == Sensor.TYPE_ACCELEROMETER) {
             // event.values[0] mide el eje X del móvil: inclinar a la izquierda es positivo, a la derecha es negativo.
-            // Como en nuestro Canvas la derecha aumenta la X, lo invertimos con un menos (-) 
+            // Como en nuestro Canvas la derecha aumenta la X, lo invertimos con un menos (-)
             // para que la inercia visual coincida exactamente con la gravedad física del mundo real.
             inclinacionX = -event.values[0]
-            
+
             // event.values[1] mide el eje Y del móvil: ponerlo de pie es positivo, tumbarlo plano es negativo.
             // Lo usamos tal cual para que al levantar el móvil, los objetos tiendan a "caer" más rápido.
             inclinacionY = event.values[1]
@@ -346,45 +352,77 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
         if (botonIzqPulsado) aplicarChorro(width * 0.25f, height * 0.8f)
         if (botonDerPulsado) aplicarChorro(width * 0.75f, height * 0.8f)
 
-        // Iteración maestra a través de todo el catálogo físico de elementos vivos.
-        for (p in objetosFlotantes) {
+        // OPTIMIZACIÓN: Cacheamos las variables matemáticas para no ejecutar multiplicaciones 60 veces por bola.
+        val limiteSuelo = height * 0.8f
+        val limiteParedDer = width.toFloat()
+
+        // OPTIMIZACIÓN GC: Usar un bucle 'for indexado' en Kotlin evita crear un objeto `Iterator` invisible en cada frame.
+        for (i in 0 until objetosFlotantes.size) {
+            val p = objetosFlotantes[i]
+
             // Suma del balance de fuerzas naturales aplicadas al eje vertical.
             p.vy += (gravedad + flotabilidad)
 
             // ============================================================================
             // INYECCIÓN DE FUERZAS DEL ACELERÓMETRO
             // ============================================================================
-            // REQUISITO ESTRICTO: Solo le aplicamos la inercia del acelerómetro si la ficha
-            // NO ha sido atrapada todavía. Las que lograron el objetivo serán "inmunes" al 
-            // movimiento del móvil y se quedarán tranquilas en su sitio, sin salirse accidentalmente.
             if (!p.atrapado) {
-                // Multiplicamos por 0.4f para suavizar la fuerza del sensor. Si aplicáramos el 100%,
-                // los objetos se moverían de forma tan violenta y rebotarían tanto que sería injugable.
-                p.vx += inclinacionX * 0.4f
-                p.vy += inclinacionY * 0.4f
+                // Se ha reducido el multiplicador de inercia (0.3f en vez de 0.4f) para simular
+                // que el agua pesa y frena los cambios bruscos de inclinación de tu mano.
+                p.vx += inclinacionX * 0.3f
+                p.vy += inclinacionY * 0.3f
             }
             // ============================================================================
 
-            // Atenuación obligatoria de inercia para imposibilitar movimiento infinito desbocado (Rozamiento o viscosidad).
+            // Atenuación obligatoria de inercia (Viscosidad del agua incrementada)
             p.vx *= friccionAgua
             p.vy *= friccionAgua
+
+            // ============================================================================
+            // RESISTENCIA DE FLUIDOS: VELOCIDAD TERMINAL
+            // Matemática estricta para asegurar que ninguna pieza supera jamás la velocidad
+            // balística por mucha gravedad, inclinación o empuje que reciba junta.
+            // ============================================================================
+            if (p.vx > velocidadMaxima) p.vx = velocidadMaxima else if (p.vx < -velocidadMaxima) p.vx = -velocidadMaxima
+            if (p.vy > velocidadMaxima) p.vy = velocidadMaxima else if (p.vy < -velocidadMaxima) p.vy = -velocidadMaxima
 
             // Impacto del cálculo inercial final directamente hacia las variables de localización cruda.
             p.x += p.vx
             p.y += p.vy
 
-            // Comprobación de Colisiones Laterales contra el cristal plástico perimetral imaginario del juego.
-            // Si supera el límite de pared, se incrusta en el borde y se invierte su trayectoria inercial en modo rebote (`*= -X`).
-            if (p.x - p.radio < 0) { p.x = p.radio; p.vx *= -0.7f }
-            if (p.x + p.radio > width) { p.x = width - p.radio; p.vx *= -0.7f }
-            
-            // Comprobación de Colisión Superior contra el "techo de cristal".
-            if (p.y - p.radio < 0) { p.y = p.radio; p.vy *= -0.5f }
+            // ============================================================================
+            // REBOTES EN EL AGUA (Absorción de impactos)
+            // ============================================================================
+            // Comprobación de Colisiones Laterales
+            if (p.x - p.radio < 0) {
+                p.x = p.radio
+                p.vx *= -0.4f
+            }
+            if (p.x + p.radio > limiteParedDer) {
+                p.x = limiteParedDer - p.radio
+                p.vx *= -0.4f
+            }
 
-            // Comprobación de Gravedad Muerta. Fija el fondo al límite plástico del motor (80% de la altitud visual general).
-            if (p.y + p.radio > height * 0.8f && !p.atrapado) {
-                p.y = height * 0.8f - p.radio
-                p.vy *= -0.6f
+            // Comprobación de Colisión Superior contra el "techo de cristal".
+            if (p.y - p.radio < 0) {
+                p.y = p.radio
+                p.vy *= -0.3f
+            }
+
+            // Comprobación de Gravedad Muerta contra el plástico inferior.
+            if (p.y + p.radio > limiteSuelo && !p.atrapado) {
+                p.y = limiteSuelo - p.radio
+                p.vy *= -0.4f
+
+                // ============================================================================
+                // LÓGICA ANTI-ATASCO (Optimización para esquinas en móviles lentos)
+                // ============================================================================
+                // Si la ficha descansa en el fondo y no le queda casi velocidad, le aplicamos
+                // una micro-turbulencia aleatoria (movimiento browniano acuático) para despegarla.
+                if (Math.abs(p.vx) < 0.5f && Math.abs(p.vy) < 0.5f) {
+                    p.vx += (Math.random().toFloat() - 0.5f) * 3f
+                    p.vy -= Math.random().toFloat() * 2f // Leve saltito hacia arriba
+                }
             }
         }
 
@@ -418,24 +456,27 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
      * @param yChorro Punto de origen Y del geiser (el lecho del mecanismo base).
      */
     private fun aplicarChorro(xChorro: Float, yChorro: Float) {
-        for (p in objetosFlotantes) {
+        val radioChorro = width * 0.4f // Cacheado
+
+        for (i in 0 until objetosFlotantes.size) {
+            val p = objetosFlotantes[i]
             // Un objeto anclado al poste deja de sentir las tempestades del agua.
             if (p.atrapado) continue
 
             val dx = Math.abs(p.x - xChorro)
 
-            // Efecto Límite: Exclusivamente los elementos adyacentes a la columna fluida son interpelados (40% pantalla máximo).
-            if (dx < width * 0.4f) {
+            // Efecto Límite: Exclusivamente los elementos adyacentes a la columna fluida son interpelados.
+            if (dx < radioChorro) {
                 // Algoritmo de Decadencia (Atenuación Linear). En el centro=1.0 pura fuerza, en bordes=0.0 de fuerza.
-                val atenuacion = 1f - (dx / (width * 0.4f))
+                val atenuacion = 1f - (dx / radioChorro)
 
                 // Asignamos una fuerza irregular randomizada (5 a 13) y la modulamos por la decadencia geográfica.
-                val fuerzaVertical = (5f + Math.random() * 8f).toFloat() * atenuacion
+                val fuerzaVertical = (5f + Math.random().toFloat() * 8f) * atenuacion
                 // En el mundo canvas, restar "Y" propulsa al objeto a elevarse en los aires.
                 p.vy -= fuerzaVertical
 
                 // Emulamos corrientes transversales imprecisas al añadir inestabilidad fortuita lateral.
-                p.vx += (Math.random() - 0.5f).toFloat() * 12f * atenuacion
+                p.vx += (Math.random().toFloat() - 0.5f) * 12f * atenuacion
             }
         }
     }
@@ -449,12 +490,18 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
         // Bloque de cerramiento base opaco (Cubre y oculta las partes sumergidas que toquen fondo)
         canvas.drawRect(0f, height * 0.8f, width.toFloat(), height.toFloat(), paintBase)
 
-        // PANEL DE BOTONES (Izquierdo) - Invoca dinámicamente un algoritmo de oscurecimiento interactivo si es detectado un toque.
-        paintBoton.color = if (botonIzqPulsado) oscurecerColor(colorBotonIzquierdoNormal) else colorBotonIzquierdoNormal
+        // OPTIMIZACIÓN GC: Calculamos el color oscuro SÓLO una vez y no en los 60 fotogramas.
+        if (!coloresBotonesCalculados) {
+            colorIzqOscuro = oscurecerColor(colorBotonIzquierdoNormal)
+            colorDerOscuro = oscurecerColor(colorBotonDerechoNormal)
+            coloresBotonesCalculados = true
+        }
+
+        // PANEL DE BOTONES
+        paintBoton.color = if (botonIzqPulsado) colorIzqOscuro else colorBotonIzquierdoNormal
         canvas.drawCircle(width * 0.25f, height * 0.9f, width * 0.1f, paintBoton)
 
-        // PANEL DE BOTONES (Derecho)
-        paintBoton.color = if (botonDerPulsado) oscurecerColor(colorBotonDerechoNormal) else colorBotonDerechoNormal
+        paintBoton.color = if (botonDerPulsado) colorDerOscuro else colorBotonDerechoNormal
         canvas.drawCircle(width * 0.75f, height * 0.9f, width * 0.1f, paintBoton)
 
         // ================== Cajas Ópticas de Legibilidad Translucida ==================
@@ -462,17 +509,24 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
         // 1. Panel de Retorno de Flujo (Menú de salida) - Emoji desplazado para no solapar el reloj/batería del sistema.
         canvas.drawText("🔙", 45f, 180f, paintTextoBoton)
 
-        // 2. Sistema de Centralización del Score - Calcula dimensiones tipográficas de las centenas de puntos de manera adaptativa.
-        val textoPuntuacion = "$puntuacion"
-        val anchoTexto = paintMarcador.measureText(textoPuntuacion)
-        val rectFondoMarcador = RectF(
+        // 2. Sistema de Centralización del Score (Optimizado para evitar el Garbage Collector)
+        if (puntuacion != puntuacionAnterior) {
+            textoPuntuacionCache = "$puntuacion"
+            puntuacionAnterior = puntuacion
+        }
+
+        val anchoTexto = paintMarcador.measureText(textoPuntuacionCache)
+
+        // Reciclamos la estructura del rectángulo global, alterando solo sus dimensiones numéricas.
+        rectFondoMarcador.set(
             width / 2f - anchoTexto / 2f - 40f,
             30f,
             width / 2f + anchoTexto / 2f + 40f,
             150f
         )
+
         canvas.drawRoundRect(rectFondoMarcador, 25f, 25f, paintFondoUI)
-        canvas.drawText(textoPuntuacion, width / 2f, 110f, paintMarcador)
+        canvas.drawText(textoPuntuacionCache, width / 2f, 110f, paintMarcador)
     }
 
     /**
@@ -483,13 +537,12 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
      * @return Código numérico final manipulado que resulta en una tonalidad empobrecida de brillo en un 40%.
      */
     protected fun oscurecerColor(colorBase: Int): Int {
-        val hsv = FloatArray(3)
-        // Transformamos el RGB estándar a un modelo basado en las variables vitales de luz
-        Color.colorToHSV(colorBase, hsv)
+        // OPTIMIZACIÓN GC: Usamos el array pre-instanciado 'arrayHsvTemporal' de la clase base.
+        Color.colorToHSV(colorBase, arrayHsvTemporal)
         // Reducimos el tercer índice (Luminosidad / Value) drásticamente al 60% puro de su total.
-        hsv[2] *= 0.6f
+        arrayHsvTemporal[2] *= 0.6f
         // Empaquetamos y rearmamos el resultado en modo `Int`
-        return Color.HSVToColor(hsv)
+        return Color.HSVToColor(arrayHsvTemporal)
     }
 
     /**
