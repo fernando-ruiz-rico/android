@@ -10,6 +10,9 @@
  * ininterrumpido a gran velocidad. Este bucle aplica leyes físicas (gravedad, agua, inercia)
  * a todos los objetos del juego y dibuja la interfaz común como el plástico de colores,
  * la zona del agua, el marcador y los botones multitáctiles.
+ * Se integra `SensorEventListener` para captar la inclinación física del teléfono y aplicar
+ * fuerzas laterales y verticales a los objetos, permitiendo al jugador mover el dispositivo
+ * para ayudar a las piezas a llegar a su objetivo sin salirse una vez atrapadas.
  *
  * LO QUE SE APRENDE EN ESTE FICHERO:
  * 1. Herencia y Clases Abstractas: Construimos un motor físico genérico (`JuegoAguaBase`)
@@ -22,7 +25,9 @@
  * el evento `onTouchEvent` para permitir pulsar los dos chorros a la vez.
  * 5. Manipulación de Color Dinámica: Algoritmo HSV para oscurecer el color del botón al
  * pulsarlo fotograma a fotograma, logrando retroalimentación visual.
- * 6. Integración de Audio (NUEVO): Uso de `MediaPlayer` para BGM y `SoundPool` para SFX sin latencia.
+ * 6. Integración de Audio: Uso de `MediaPlayer` para BGM y `SoundPool` para SFX sin latencia.
+ * 7. Sensores de Hardware (Acelerómetro): Integración con `SensorManager` para leer los
+ * ejes espaciales del teléfono en tiempo real y transformarlos en vectores de fuerza.
  * =========================================================================================
  */
 package com.example.myapplication
@@ -32,6 +37,10 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.SoundPool
@@ -67,10 +76,11 @@ data class ObjetoFlotante(
  * Plantilla base abstracta de nuestro motor de juego 2D customizado.
  * Heredar de `SurfaceView` y `SurfaceHolder.Callback` proporciona una superficie de hardware optimizada.
  * Implementar `Runnable` garantiza que esta clase posee el código pesado que ejecutaremos en paralelo.
+ * Implementar `SensorEventListener` permite a esta vista escuchar directamente la placa base del móvil.
  *
  * @param context El puente hacia el sistema principal de la App Android.
  */
-abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHolder.Callback, Runnable {
+abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHolder.Callback, Runnable, SensorEventListener {
 
     /**
      * Colección en la que cada minijuego hijo guardará sus piezas instanciadas.
@@ -145,6 +155,27 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
 
     /** Variable que define qué canción sonará. Por defecto es 0 (sin música), cada minijuego la configurará. */
     protected var idMusicaFondo: Int = 0
+
+    // ================================= ACELERÓMETRO  =================================
+    /** * Puerta de enlace principal con los servicios de hardware del dispositivo. 
+     * Permite solicitar acceso a los distintos sensores físicos de la placa base. 
+     */
+    private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    
+    /** * Representación en código del hardware físico del sensor de aceleración.
+     * Mide la fuerza de aceleración (en m/s²) que se aplica al dispositivo en los tres ejes físicos (x, y, z).
+     */
+    private val acelerometro: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+    
+    /** * Fuerza lateral calculada generada al volcar el móvil hacia la izquierda o derecha.
+     * Transformamos este valor bruto para sumarlo directamente a la inercia (Vx) de los objetos.
+     */
+    private var inclinacionX = 0f
+    
+    /** * Fuerza vertical calculada generada al inclinar el móvil hacia nosotros (levantarlo) o alejarlo (tumbarlo).
+     * Transformamos este valor para alterar la gravedad (Vy) que sienten los objetos.
+     */
+    private var inclinacionY = 0f
     // ====================================================================================
 
     init {
@@ -208,6 +239,13 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
             }
         }
 
+        // === ACTIVAR ACELERÓMETRO ===
+        acelerometro?.let {
+            // Registramos esta vista del juego como oyente de las variaciones físicas.
+            // SENSOR_DELAY_GAME le indica a Android que queremos actualizaciones a gran velocidad (para juegos).
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
+        }
+
         hiloJuego = Thread(this) // Se le asigna explícitamente el contexto de ejecución.
         hiloJuego?.start()
     }
@@ -226,6 +264,11 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
         reproductorMusica?.stop()
         reproductorMusica?.release()
         reproductorMusica = null
+
+        // === DESACTIVAR ACELERÓMETRO ===
+        // Es un mandamiento crítico de Android: Si el juego se oculta, nos desuscribimos del sensor 
+        // para no drenar la batería del usuario en segundo plano.
+        sensorManager.unregisterListener(this)
     }
 
     /** Método complementario exigido por la interfaz `Callback`. Sin uso funcional en nuestro contexto específico. */
@@ -240,6 +283,28 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
         motorEfectos?.release()
         motorEfectos = null
     }
+
+    /**
+     * MÉTODO DE SENSOR: Se ejecuta de forma asíncrona docenas de veces por segundo
+     * cada vez que la mano del usuario genera un micro-movimiento o cambia el ángulo del dispositivo móvil.
+     *
+     * @param event Contiene la información cruda devuelta por el hardware físico.
+     */
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (event?.sensor?.type == Sensor.TYPE_ACCELEROMETER) {
+            // event.values[0] mide el eje X del móvil: inclinar a la izquierda es positivo, a la derecha es negativo.
+            // Como en nuestro Canvas la derecha aumenta la X, lo invertimos con un menos (-) 
+            // para que la inercia visual coincida exactamente con la gravedad física del mundo real.
+            inclinacionX = -event.values[0]
+            
+            // event.values[1] mide el eje Y del móvil: ponerlo de pie es positivo, tumbarlo plano es negativo.
+            // Lo usamos tal cual para que al levantar el móvil, los objetos tiendan a "caer" más rápido.
+            inclinacionY = event.values[1]
+        }
+    }
+
+    /** Método requerido por la interfaz de sensores, no necesitamos gestionar los cambios de precisión aquí. */
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
     /**
      * LA ARQUITECTURA CRÍTICA: EL GAME LOOP CONTINUO.
@@ -286,6 +351,20 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
             // Suma del balance de fuerzas naturales aplicadas al eje vertical.
             p.vy += (gravedad + flotabilidad)
 
+            // ============================================================================
+            // INYECCIÓN DE FUERZAS DEL ACELERÓMETRO
+            // ============================================================================
+            // REQUISITO ESTRICTO: Solo le aplicamos la inercia del acelerómetro si la ficha
+            // NO ha sido atrapada todavía. Las que lograron el objetivo serán "inmunes" al 
+            // movimiento del móvil y se quedarán tranquilas en su sitio, sin salirse accidentalmente.
+            if (!p.atrapado) {
+                // Multiplicamos por 0.4f para suavizar la fuerza del sensor. Si aplicáramos el 100%,
+                // los objetos se moverían de forma tan violenta y rebotarían tanto que sería injugable.
+                p.vx += inclinacionX * 0.4f
+                p.vy += inclinacionY * 0.4f
+            }
+            // ============================================================================
+
             // Atenuación obligatoria de inercia para imposibilitar movimiento infinito desbocado (Rozamiento o viscosidad).
             p.vx *= friccionAgua
             p.vy *= friccionAgua
@@ -298,6 +377,7 @@ abstract class JuegoAguaBase(context: Context) : SurfaceView(context), SurfaceHo
             // Si supera el límite de pared, se incrusta en el borde y se invierte su trayectoria inercial en modo rebote (`*= -X`).
             if (p.x - p.radio < 0) { p.x = p.radio; p.vx *= -0.7f }
             if (p.x + p.radio > width) { p.x = width - p.radio; p.vx *= -0.7f }
+            
             // Comprobación de Colisión Superior contra el "techo de cristal".
             if (p.y - p.radio < 0) { p.y = p.radio; p.vy *= -0.5f }
 
